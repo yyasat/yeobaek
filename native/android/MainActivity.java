@@ -20,8 +20,10 @@ public class MainActivity extends BridgeActivity {
 
         // 让返回键走我们自己的退栈逻辑
         try {
-            com.getcapacitor.Plugin p = getBridge().getPlugin("JianSuNative");
-            if (p instanceof JianSuNativePlugin) pluginRef = (JianSuNativePlugin) p;
+            com.getcapacitor.PluginHandle handle = getBridge().getPlugin("JianSuNative");
+            if (handle != null && handle.getInstance() instanceof JianSuNativePlugin) {
+                pluginRef = (JianSuNativePlugin) handle.getInstance();
+            }
         } catch (Exception ignored) {}
 
         Window w = getWindow();
