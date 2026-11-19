@@ -87,6 +87,19 @@ jobs:
                   try: f.unlink()
                   except Exception: pass
 
+          # 清掉所有对 @drawable/splash 的引用，否则资源链接会失败
+          for p in res.glob("values*/*.xml"):
+              try:
+                  t = p.read_text()
+              except Exception:
+                  continue
+              if "splash" not in t:
+                  continue
+              t2 = re.sub(r'\s*<item name="[^"]*">@drawable/splash</item>', '', t)
+              t2 = t2.replace("@drawable/splash", "@android:color/transparent")
+              if t2 != t:
+                  p.write_text(t2)
+
           for p in res.glob("values*/styles.xml"):
               s = p.read_text()
               # 启动主题不再带 Logo，只留底色，避免出现蓝色方块开屏
