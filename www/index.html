@@ -1,14 +1,15 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="yeobaek">
+<html lang="zh-CN" data-theme="su">
 <head>
 <meta charset="utf-8">
-<title>여백 · 留白</title>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#F2F0EA" id="metaTheme">
+<title>见素</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#EDF1F4" id="metaTheme">
 <meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="见素">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./assets/css/tokens.css">
@@ -16,7 +17,7 @@
 </head>
 <body>
 
-<!-- ── 独立绘制的 SVG 图标集（无 emoji） ───────────────────────── -->
+<!-- ── 独立绘制的 SVG 图标 ──────────────────────────────────── -->
 <svg width="0" height="0" aria-hidden="true" style="position:absolute">
   <defs>
     <g id="i-search"><circle cx="11" cy="11" r="6.2"/><path d="M15.6 15.6 20 20"/></g>
@@ -27,6 +28,7 @@
     <g id="i-sliders"><path d="M5 8h9M17 8h2M5 16h3M11 16h8"/><circle cx="15.6" cy="8" r="1.9"/><circle cx="9.6" cy="16" r="1.9"/></g>
     <g id="i-x"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></g>
     <g id="i-back"><path d="M14.4 5.6 8 12l6.4 6.4"/></g>
+    <g id="i-fwd"><path d="M9.6 5.6 16 12l-6.4 6.4"/></g>
     <g id="i-refresh"><path d="M19.2 12a7.2 7.2 0 1 1-2.1-5.1"/><path d="M19.6 4.6v4.6h-4.6"/></g>
     <g id="i-external"><path d="M13.6 4.8h5.6v5.6"/><path d="M19.2 4.8 11 13"/><path d="M17.4 14.4v4.2a1.4 1.4 0 0 1-1.4 1.4H5.4A1.4 1.4 0 0 1 4 18.6V8a1.4 1.4 0 0 1 1.4-1.4h4.2"/></g>
     <g id="i-trash"><path d="M4.8 7.2h14.4M9.6 7.2V5.4a1 1 0 0 1 1-1h2.8a1 1 0 0 1 1 1v1.8"/><path d="M6.6 7.2 7.5 19a1.4 1.4 0 0 0 1.4 1.3h6.2a1.4 1.4 0 0 0 1.4-1.3l.9-11.8"/></g>
@@ -36,41 +38,47 @@
     <g id="i-upload"><path d="M12 15.6V5.2"/><path d="M8 9.2 12 5.2l4 4"/><path d="M4.8 18.2h14.4"/></g>
     <g id="i-clipboard"><rect x="6.2" y="5.4" width="11.6" height="14.6" rx="2.4"/><path d="M9.4 5.4V4.6a1 1 0 0 1 1-1h3.2a1 1 0 0 1 1 1v.8"/><path d="M9.4 11h5.2M9.4 14.4h3.4"/></g>
     <g id="i-star"><path d="M12 4.4l2.3 4.9 5.3.7-3.9 3.7 1 5.3-4.7-2.6-4.7 2.6 1-5.3L4.4 10l5.3-.7z"/></g>
-    <g id="i-folder"><path d="M4 7.6a2 2 0 0 1 2-2h3.4l2 2.4H18a2 2 0 0 1 2 2v7.4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></g>
     <g id="i-more"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></g>
+    <g id="i-more-v"><circle cx="12" cy="6" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="18" r="1.2"/></g>
     <g id="i-check"><path d="M5.6 12.4 10 16.8 18.4 7.6"/></g>
     <g id="i-chev"><path d="M9.6 5.6 16 12l-6.4 6.4"/></g>
-    <g id="i-grid"><rect x="4.4" y="4.4" width="6.2" height="6.2" rx="1.6"/><rect x="13.4" y="4.4" width="6.2" height="6.2" rx="1.6"/><rect x="4.4" y="13.4" width="6.2" height="6.2" rx="1.6"/><rect x="13.4" y="13.4" width="6.2" height="6.2" rx="1.6"/></g>
+    <g id="i-chev-down"><path d="M6 9.6 12 16l6-6.4"/></g>
     <g id="i-zoom-in"><circle cx="10.8" cy="10.8" r="6"/><path d="M15.2 15.2 20 20M8.2 10.8h5.2M10.8 8.2v5.2"/></g>
     <g id="i-zoom-out"><circle cx="10.8" cy="10.8" r="6"/><path d="M15.2 15.2 20 20M8.2 10.8h5.2"/></g>
     <g id="i-pen"><path d="M4.8 19.2 5.6 15 15.4 5.2a2.2 2.2 0 0 1 3.1 0l.3.3a2.2 2.2 0 0 1 0 3.1L8.9 18.4z"/><path d="M13.8 6.8 17.2 10.2"/></g>
     <g id="i-shield"><path d="M12 3.8 5.6 6v5.4c0 4 2.6 7.2 6.4 8.8 3.8-1.6 6.4-4.8 6.4-8.8V6z"/><path d="M9.4 11.8 11.2 13.6 14.8 10"/></g>
-    <g id="i-bolt-off"><path d="M4 4 20 20"/><path d="M12.4 4 8.6 9.6h3.2L9.4 15.2"/><path d="M13.6 14 12 18.4"/></g>
+    <g id="i-bell"><path d="M6.6 10.2a5.4 5.4 0 0 1 10.8 0c0 4 1.6 5.4 1.6 5.4H5s1.6-1.4 1.6-5.4z"/><path d="M10.2 18.4a2 2 0 0 0 3.6 0"/></g>
+    <g id="i-heart"><path d="M12 19.4 5.4 13a4 4 0 0 1 5.6-5.6l1 1 1-1A4 4 0 0 1 18.6 13z"/></g>
+    <g id="i-moon"><path d="M19.2 14.6A7.6 7.6 0 0 1 9.4 4.8a7.6 7.6 0 1 0 9.8 9.8z"/></g>
+    <g id="i-sun"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></g>
+    <g id="i-auto"><circle cx="12" cy="12" r="8"/><path d="M12 4v16"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></g>
+    <g id="i-cpu"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3.6v3.4M14 3.6v3.4M10 17v3.4M14 17v3.4M3.6 10H7M3.6 14H7M17 10h3.4M17 14h3.4"/></g>
+    <g id="i-pin"><path d="M12 21s6.4-6 6.4-11a6.4 6.4 0 1 0-12.8 0C5.6 15 12 21 12 21z"/><circle cx="12" cy="10" r="2.4"/></g>
+    <g id="i-clock"><circle cx="12" cy="12" r="8"/><path d="M12 7.6V12l3.2 2"/></g>
+    <g id="i-keyboard"><rect x="3.2" y="6.6" width="17.6" height="10.8" rx="2.4"/><path d="M6.6 10h1M10 10h1M13.4 10h1M16.8 10h1M6.6 13.4h1M10 13.4h1M13.4 13.4h1M16.8 13.4h1"/></g>
+    <g id="i-update"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20.4 3.6v5h-5"/></g>
   </defs>
 </svg>
 
 <div class="shell" id="shell">
 
-  <!-- 顶栏：内容延伸到状态栏下方，底色随主题延伸 -->
   <header class="topbar" id="topbar">
     <div class="brand">
-      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
-        <rect x="4.5" y="4.5" width="23" height="23" rx="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
-        <path d="M16 9.4v13.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".38"/>
-      </svg>
-      <span class="brand-word">여백</span>
-      <span class="brand-sub">留白</span>
+      <span class="brand-word">见素</span>
     </div>
-    <button class="icon-btn" id="btnMenu" aria-label="更多"><svg viewBox="0 0 24 24"><use href="#i-more"/></svg></button>
+    <button class="icon-btn" id="btnMenu" aria-label="更多菜单"><svg viewBox="0 0 24 24"><use href="#i-more"/></svg></button>
   </header>
 
   <main class="main" id="main">
 
-    <!-- ── 首页 ─────────────────────────────────────────────── -->
+    <!-- ── 首页 ───────────────────────────────────────────── -->
     <section class="view is-active" id="view-home" aria-label="首页">
       <div class="hero">
-        <p class="hero-kicker">把网页放回安静的地方</p>
-        <h1 class="hero-title">今天想<br>读点什么。</h1>
+        <p class="hero-kicker" id="heroKicker">把网页放回安静的地方</p>
+        <h1 class="hero-title" id="heroTitle"></h1>
+        <button class="hero-edit" id="btnEditHero">
+          <svg viewBox="0 0 24 24"><use href="#i-pen"/></svg>自定义问候
+        </button>
       </div>
 
       <form class="omnibox" id="omnibox" autocomplete="off">
@@ -86,19 +94,22 @@
 
       <div class="section-head">
         <h2 class="section-title">收藏</h2>
-        <button class="text-btn" id="btnAddFav">添加</button>
+        <div class="head-acts">
+          <button class="text-btn muted" id="btnEditFavs">编辑</button>
+          <button class="text-btn" id="btnAddFav">添加</button>
+        </div>
       </div>
-
       <div class="fav-grid" id="favGrid"></div>
       <p class="empty" id="favEmpty" hidden>还没有收藏。添加一个网址，名称与图标会自动取回。</p>
 
       <div class="section-head">
         <h2 class="section-title">最近</h2>
+        <button class="text-btn muted" id="btnClearRecent">清空</button>
       </div>
       <ul class="recent" id="recentList"></ul>
     </section>
 
-    <!-- ── 标签页 ───────────────────────────────────────────── -->
+    <!-- ── 标签页 ─────────────────────────────────────────── -->
     <section class="view" id="view-tabs" aria-label="标签页">
       <div class="section-head">
         <h2 class="section-title">标签页</h2>
@@ -107,14 +118,14 @@
       <ul class="tab-list" id="tabList"></ul>
     </section>
 
-    <!-- ── 控制台 ───────────────────────────────────────────── -->
+    <!-- ── 控制台 ─────────────────────────────────────────── -->
     <section class="view" id="view-console" aria-label="控制台">
       <div class="console-head">
         <div>
           <h2 class="section-title">控制台</h2>
           <p class="console-target" id="consoleTarget">未连接页面</p>
         </div>
-        <button class="text-btn" id="consoleClear">清空</button>
+        <button class="text-btn muted" id="consoleClear">清空</button>
       </div>
 
       <div class="console-log" id="consoleLog" role="log" aria-live="polite"></div>
@@ -142,35 +153,60 @@
         </form>
         <pre class="ai-out" id="aiOut" hidden></pre>
         <div class="ai-actions" id="aiActions" hidden>
-          <button class="btn ghost sm" id="aiRun">运行</button>
-          <button class="btn ghost sm" id="aiInsert">放入输入框</button>
+          <button class="btn ghost sm" id="aiRun" type="button">运行</button>
+          <button class="btn ghost sm" id="aiInsert" type="button">放入输入框</button>
         </div>
       </div>
+
+      <p class="note" id="consoleNote"></p>
     </section>
 
-    <!-- ── 设置 ─────────────────────────────────────────────── -->
+    <!-- ── 设置 ───────────────────────────────────────────── -->
     <section class="view" id="view-settings" aria-label="设置">
-      <h2 class="section-title">外观</h2>
+      <h2 class="section-title group-title">外观</h2>
+
+      <div class="row">
+        <span class="row-label">日夜模式<span class="row-sub">自动跟随系统</span></span>
+        <div class="seg" id="segDayNight" role="group" aria-label="日夜模式">
+          <button data-mode="day">日间</button>
+          <button data-mode="night">夜间</button>
+          <button data-mode="auto">自动</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <span class="row-label">主题色<span class="row-sub">低饱和灰调</span></span>
+        <button class="text-btn" id="btnAddPreset">存为预设</button>
+      </div>
       <div class="theme-grid" id="themeGrid"></div>
 
       <div class="row">
-        <label for="fontRange">字号</label>
-        <input id="fontRange" type="range" min="14" max="19" step="1" value="15">
-        <output id="fontOut">15</output>
+        <span class="row-label">自定义配色</span>
+        <button class="btn ghost sm" id="btnCustomColor">调整</button>
       </div>
 
       <div class="row">
-        <label for="zoomRange">网页默认缩放</label>
-        <input id="zoomRange" type="range" min="60" max="140" step="10" value="100">
-        <output id="zoomOut">100%</output>
+        <span class="row-label">字号</span>
+        <input id="fontRange" type="range" min="14" max="19" step="1" value="15" aria-label="字号">
+        <output id="fontOut">15</output>
       </div>
 
-      <h2 class="section-title">存储</h2>
+      <h2 class="section-title group-title">搜索</h2>
+      <div class="row">
+        <span class="row-label">搜索引擎</span>
+        <div class="seg" id="segEngine" role="group" aria-label="搜索引擎">
+          <button data-engine="bing">必应</button>
+          <button data-engine="baidu">百度</button>
+          <button data-engine="google">谷歌</button>
+        </div>
+      </div>
+
+      <h2 class="section-title group-title">数据</h2>
       <div class="card">
         <div class="kv"><span>持久化存储</span><b id="persistState">检查中</b></div>
         <div class="kv"><span>已用空间</span><b id="quotaUsed">—</b></div>
         <div class="bar"><i id="quotaBar" style="width:0%"></i></div>
-        <p class="note">申请持久配额后，浏览器在空间紧张时不会先清掉这里的数据。清空只在你手动执行时发生。</p>
+        <p class="note">每个站点默认开启持久化。申请通过后会弹窗告知。清理只在你手动确认后发生。</p>
         <div class="btn-row">
           <button class="btn" id="btnPersist">申请持久化</button>
           <button class="btn ghost" id="btnBackup">导出备份</button>
@@ -178,24 +214,30 @@
         </div>
       </div>
 
-      <h2 class="section-title">权限</h2>
+      <h2 class="section-title group-title">站点管理</h2>
+      <ul class="data-list" id="siteList"></ul>
+
+      <h2 class="section-title group-title">权限</h2>
       <div class="card">
-        <div class="kv"><span>读取剪贴板</span><button class="btn ghost sm" id="btnClipRead">请求</button></div>
-        <div class="kv"><span>写入剪贴板</span><button class="btn ghost sm" id="btnClipWrite">请求</button></div>
-        <div class="kv"><span>通知</span><button class="btn ghost sm" id="btnNotify">请求</button></div>
-        <p class="note">每一项都需要你在系统弹窗里明确同意，拒绝后不会再次自动请求。</p>
+        <div class="kv"><span>读取剪贴板</span><button class="btn ghost sm" id="btnClipRead">申请</button></div>
+        <div class="kv"><span>写入剪贴板</span><button class="btn ghost sm" id="btnClipWrite">申请</button></div>
+        <div class="kv"><span>通知</span><button class="btn ghost sm" id="btnNotify">申请</button></div>
+        <p class="note">每项都会弹出系统对话框，需要你明确同意。拒绝后不会再次自动请求。</p>
       </div>
 
-      <h2 class="section-title">数据</h2>
-      <ul class="data-list" id="dataList"></ul>
+      <h2 class="section-title group-title">应用</h2>
+      <div class="card">
+        <div class="kv"><span>版本</span><b id="verLabel">—</b></div>
+        <div class="kv"><span>检查更新</span><button class="btn ghost sm" id="btnCheckUpdate">检查</button></div>
+      </div>
+
       <div class="btn-row">
-        <button class="btn danger" id="btnWipeAll">清除全部网页数据</button>
+        <button class="btn danger" id="btnWipeAll">清除全部数据</button>
       </div>
-      <p class="note">清除本站数据会移除收藏、分类、标签与设置；清除某站点数据会移除该站点的 Cookie、缓存与存储。仅在你亲手确认后执行。</p>
 
-      <h2 class="section-title">关于</h2>
-      <p class="about">여백 / 留白 · 一个安静的浏览器外壳。低饱和配色、独立绘制的图标、可切换的六套主题。数据留在本机。</p>
-      <p class="build" id="buildInfo"></p>
+      <h2 class="section-title group-title">关于</h2>
+      <p class="note" style="margin-top:0">见素抱朴。一个低饱和、少打扰的浏览器。数据留在本机。</p>
+      <p class="note" id="buildInfo" style="font-family:var(--font-num);font-size:.7rem"></p>
     </section>
   </main>
 
@@ -217,34 +259,83 @@
 
 <!-- ── 网页层 ──────────────────────────────────────────────── -->
 <div class="page-layer" id="pageLayer" hidden>
+  <div class="tabstrip" id="tabStrip" role="tablist" aria-label="打开的标签"></div>
   <div class="page-bar">
-    <button class="icon-btn" id="pgBack" aria-label="返回"><svg viewBox="0 0 24 24"><use href="#i-back"/></svg></button>
+    <button class="icon-btn sm" id="pgBack" aria-label="后退"><svg viewBox="0 0 24 24"><use href="#i-back"/></svg></button>
+    <button class="icon-btn sm" id="pgFwd" aria-label="前进"><svg viewBox="0 0 24 24"><use href="#i-fwd"/></svg></button>
     <div class="page-meta">
       <span class="page-title" id="pgTitle">页面</span>
       <span class="page-host" id="pgHost"></span>
     </div>
-    <button class="icon-btn" id="pgReload" aria-label="刷新"><svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg></button>
-    <button class="icon-btn" id="pgOpen" aria-label="用系统浏览器打开"><svg viewBox="0 0 24 24"><use href="#i-external"/></svg></button>
+    <button class="icon-btn sm" id="pgReload" aria-label="刷新"><svg viewBox="0 0 24 24"><use href="#i-refresh"/></svg></button>
+    <button class="icon-btn sm" id="pgMenu" aria-label="网页更多"><svg viewBox="0 0 24 24"><use href="#i-more-v"/></svg></button>
   </div>
   <div class="page-progress" id="pgProgress"></div>
   <div class="frames" id="frames"></div>
+
   <div class="page-blocked" id="pgBlocked" hidden>
-    <p>这个站点不允许被内嵌显示。</p>
-    <button class="btn" id="pgBlockedOpen">在新窗口打开</button>
-  </div>
-  <div class="zoom-pill" id="zoomPill">
-    <button id="zoomOutBtn" aria-label="缩小"><svg viewBox="0 0 24 24"><use href="#i-zoom-out"/></svg></button>
-    <span id="zoomLabel">100%</span>
-    <button id="zoomInBtn" aria-label="放大"><svg viewBox="0 0 24 24"><use href="#i-zoom-in"/></svg></button>
+    <p class="pb-title">这个站点不允许被嵌入</p>
+    <p class="pb-desc">对方设置了 X-Frame-Options 或 CSP，浏览器内核不允许它在框架里显示。在原生 WebView 版本中不受此限制。</p>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn" id="pgBlockedOpen">用系统浏览器打开</button>
+      <button class="btn ghost" id="pgBlockedBack">返回</button>
+    </div>
   </div>
 </div>
 
+<!-- ── 网页更多菜单 ────────────────────────────────────────── -->
+<dialog class="sheet" id="dlgPageMore">
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <h3>网页设置</h3>
+      <button class="icon-btn sm" data-close="dlgPageMore" aria-label="关闭"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+    </div>
+
+    <div class="row">
+      <span class="row-label">缩放<span class="row-sub" id="zoomSub">仅对当前网页生效</span></span>
+      <div class="seg">
+        <button id="pmZoomOut" type="button">−</button>
+        <button id="pmZoomReset" type="button">100%</button>
+        <button id="pmZoomIn" type="button">＋</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="row-label">后台保活<span class="row-sub">切走时保持页面运行</span></span>
+      <div class="seg" id="segKeep">
+        <button data-keep="1" type="button">开</button>
+        <button data-keep="0" type="button">关</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <span class="row-label">持久化存储<span class="row-sub">不被系统优先清理</span></span>
+      <button class="btn ghost sm" id="pmPersist" type="button">申请</button>
+    </div>
+
+    <div class="row">
+      <span class="row-label">加到桌面<span class="row-sub">名称与图标自动获取</span></span>
+      <button class="btn ghost sm" id="pmShortcut" type="button">创建</button>
+    </div>
+
+    <div class="row">
+      <span class="row-label">打开控制台<span class="row-sub">可控制当前网页</span></span>
+      <button class="btn ghost sm" id="pmConsole" type="button">打开</button>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn ghost" id="pmClearSite" type="button">清除此站数据</button>
+      <button class="btn ghost" id="pmClose" type="button">关闭网页</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- ── 添加收藏 ────────────────────────────────────────────── -->
 <dialog class="sheet" id="dlgAdd">
-  <form method="dialog" class="sheet-body">
+  <form method="dialog" class="sheet-body" id="addForm">
     <div class="sheet-head">
       <h3>添加到首页</h3>
-      <button class="icon-btn sm" value="cancel" aria-label="关闭"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+      <button class="icon-btn sm" type="button" data-close="dlgAdd" aria-label="关闭"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
     </div>
     <label class="field">
       <span>网址</span>
@@ -259,10 +350,96 @@
       <select id="addCat"></select>
     </label>
     <div class="sheet-foot">
-      <button class="btn ghost" value="cancel" type="submit">取消</button>
-      <button class="btn" value="save" type="submit" id="addSave">保存</button>
+      <button class="btn ghost" type="button" data-close="dlgAdd">取消</button>
+      <button class="btn" type="button" id="addSave">保存</button>
     </div>
   </form>
+</dialog>
+
+<!-- ── 分类管理 ────────────────────────────────────────────── -->
+<dialog class="sheet" id="dlgCats">
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <h3>分类管理</h3>
+      <button class="icon-btn sm" data-close="dlgCats" aria-label="关闭"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+    </div>
+    <ul class="line-list" id="catList"></ul>
+    <div class="btn-row">
+      <input id="newCatName" type="text" placeholder="新分类名称" style="flex:1;min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg);outline:none;font-size:.86rem">
+      <button class="btn sm" id="btnNewCat" type="button">添加</button>
+    </div>
+    <p class="note">删除分类不会删除其中的收藏，它们会回到「全部」。</p>
+  </div>
+</dialog>
+
+<!-- ── 自定义问候 ──────────────────────────────────────────── -->
+<dialog class="sheet" id="dlgHero">
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <h3>自定义问候<span class="sub">每次进入首页随机显示一条</span></h3>
+      <button class="icon-btn sm" data-close="dlgHero" aria-label="关闭"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+    </div>
+    <ul class="line-list" id="heroLineList"></ul>
+    <div class="btn-row">
+      <input id="newHeroLine" type="text" placeholder="两行用 | 分隔，例如：今天想|读点什么。" style="flex:1;min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg);outline:none;font-size:.86rem">
+      <button class="btn sm" id="btnNewHeroLine" type="button">添加</button>
+    </div>
+    <p class="note">第一条会作为副标题显示。用竖线分隔两行。至少保留一条。</p>
+  </div>
+</dialog>
+
+<!-- ── 自定义配色 ──────────────────────────────────────────── -->
+<dialog class="sheet" id="dlgColor">
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <h3>自定义配色</h3>
+      <button class="icon-btn sm" data-close="dlgColor" aria-label="关闭"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="swatch-row" id="baseSwatches"></div>
+    <p class="note" style="margin-top:0">选一个底色起点，再微调色相与明度。</p>
+    <label class="field">
+      <span>色相</span>
+      <input id="hueRange" type="range" min="0" max="360" step="1" value="205">
+    </label>
+    <label class="field">
+      <span>明度</span>
+      <input id="lightRange" type="range" min="6" max="96" step="1" value="93">
+    </label>
+    <label class="field">
+      <span>灰度</span>
+      <input id="satRange" type="range" min="0" max="30" step="1" value="8">
+    </label>
+    <div class="swatch-row" id="previewRow"></div>
+    <div class="sheet-foot">
+      <button class="btn ghost" type="button" data-close="dlgColor">取消</button>
+      <button class="btn" type="button" id="applyColor">应用</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ── 通用确认 ────────────────────────────────────────────── -->
+<dialog class="sheet" id="dlgConfirm">
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <h3 id="confirmTitle">确认</h3>
+    </div>
+    <p class="note" id="confirmBody" style="margin:0 0 var(--s4);font-size:.86rem;color:var(--fg-dim)"></p>
+    <div class="sheet-foot">
+      <button class="btn ghost" type="button" id="confirmNo">取消</button>
+      <button class="btn danger" type="button" id="confirmYes">确认</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ── 应用内更新 ──────────────────────────────────────────── -->
+<dialog class="sheet" id="dlgUpdate">
+  <div class="sheet-body">
+    <div class="sheet-head">
+      <h3>版本信息<span class="sub" id="updSub"></span></h3>
+      <button class="icon-btn sm" data-close="dlgUpdate" aria-label="关闭"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+    </div>
+    <div id="updBody"></div>
+  </div>
 </dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

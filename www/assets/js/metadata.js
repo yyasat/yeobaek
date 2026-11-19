@@ -1,20 +1,12 @@
 /* ─────────────────────────────────────────────────────────────
-   metadata.js — 填入网址后自动取「名称 + 图标」
-
-   取法顺序（逐级降级，任何一步失败都不阻塞保存）：
-   1. 本身是「已打开的标签」→ 直接用标签标题
-   2. 原生层可用（APK）→ 走 CapacitorHttp，绕过 CORS 读 <title>
-   3. 同源 / 允许 CORS → fetch 读 <title>
-   4. 全部失败 → 用域名推导一个干净的名字
-   图标一律走站点自身 /favicon.ico，失败再退到公共图标服务，最后退到首字母方块。
+   metadata.js — 填网址后自动取「名称 + 图标」
    ───────────────────────────────────────────────────────────── */
 
 export function normalizeUrl(input) {
   let s = String(input || '').trim();
   if (!s) return null;
-  if (/^(javascript|data|vbscript|file):/i.test(s)) return null;
+  if (/^(javascript|data|vbscript|file|about):/i.test(s)) return null;
 
-  // 像域名的，补 https
   const looksLikeHost = /^[\w-]+(\.[\w-]+)+(\/|$|:|\?)/.test(s) || /^localhost(:\d+)?/.test(s);
   if (looksLikeHost && !/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) s = 'https://' + s;
 
@@ -28,19 +20,19 @@ export function normalizeUrl(input) {
 export function isSearchQuery(input) {
   const s = String(input || '').trim();
   if (!s) return false;
-  if (/\s/.test(s)) return true;                       // 有空格 → 搜索
+  if (/\s/.test(s)) return true;
   if (/^[\w-]+(\.[\w-]+)+(\/|$|:|\?)/.test(s)) return false;
   if (/^localhost(:\d+)?/.test(s)) return false;
   return !/^[a-z][a-z0-9+.-]*:\/\//i.test(s);
 }
 
 export function searchUrl(q, engine = 'bing') {
-  const e = {
+  const map = {
     bing: 'https://www.bing.com/search?q=',
+    baidu: 'https://www.baidu.com/s?wd=',
     google: 'https://www.google.com/search?q=',
-    duck: 'https://duckduckgo.com/?q=',
-  }[engine] || 'https://www.bing.com/search?q=';
-  return e + encodeURIComponent(q);
+  };
+  return (map[engine] || map.bing) + encodeURIComponent(q);
 }
 
 export function hostOf(url) {
@@ -62,15 +54,15 @@ export function faviconCandidates(url) {
   const list = [];
   if (origin) list.push(`${origin}/favicon.ico`);
   if (host) list.push(`https://icons.duckduckgo.com/ip3/${host}.ico`);
-  if (host) list.push(`https://www.google.com/s2/favicons?domain=${host}&sz=64`);
+  if (host) list.push(`https://www.google.com/s2/favicons?domain=${host}&sz=128`);
   return list;
 }
 
 async function nativeGet(url) {
   const cap = globalThis.Capacitor;
-  if (!cap?.Plugins?.CapacitorHttp) return null;
+  if (!cap?.Plugins?.JianSuNative) return null;
   try {
-    const res = await cap.Plugins.CapacitorHttp.get({ url, responseType: 'text', readTimeout: 6000 });
+    const res = await cap.Plugins.JianSuNative.httpGet({ url });
     if (res?.status >= 200 && res.status < 400) return String(res.data || '');
   } catch {}
   return null;
@@ -81,43 +73,45 @@ function titleFromHtml(html) {
   const m = html.match(/<title[^>]*>([\s\S]{1,200}?)<\/title>/i);
   if (!m) return null;
   const t = m[1].replace(/\s+/g, ' ').trim();
-  if (!t || t.length < 1) return null;
+  if (!t) return null;
   return t.length > 42 ? t.slice(0, 40) + '…' : t;
 }
 
+/**
+ * 取网页标题与图标。
+ * 优先走原生（无 CORS 限制），失败再试 fetch，最后用域名推导。
+ */
 export async function resolveMeta(url) {
-  const out = { url, title: '', icon: '', host: hostOf(url) };
+  const out = { url, title: '', icon: '', host: hostOf(url), iconFallbacks: faviconCandidates(url) };
+  out.icon = out.iconFallbacks[0];
 
-  const viaNative = await nativeGet(url);
-  out.title = titleFromHtml(viaNative) || '';
+  const html = await nativeGet(url);
+  out.title = titleFromHtml(html) || '';
 
   if (!out.title) {
     try {
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 5000);
+      const timer = setTimeout(() => ctrl.abort(), 5000);
       const res = await fetch(url, { signal: ctrl.signal, credentials: 'omit', mode: 'cors' });
-      clearTimeout(t);
+      clearTimeout(timer);
       if (res.ok) out.title = titleFromHtml(await res.text()) || '';
-    } catch { /* CORS 或超时，降级 */ }
+    } catch {}
   }
 
   if (!out.title) out.title = prettyName(url);
-  out.icon = faviconCandidates(url)[0];
-  out.iconFallbacks = faviconCandidates(url);
   return out;
 }
 
-/* 图标在 <img> 上逐级回退 */
-export function attachIconFallback(imgEl, candidates, letterEl) {
+/** 图标按候选列表逐个回退，全部失败时显示首字母。 */
+export function attachIcon(el, candidates, onAllFail) {
   let i = 0;
-  const next = () => {
-    if (i >= candidates.length) {
-      imgEl.remove();
-      if (letterEl) letterEl.hidden = false;
-      return;
-    }
-    imgEl.src = candidates[i++];
+  const tryNext = () => {
+    if (i >= candidates.length) { onAllFail?.(); return; }
+    el.src = candidates[i++];
   };
-  imgEl.addEventListener('error', next, { once: false });
-  next();
+  el.addEventListener('error', tryNext);
+  el.addEventListener('load', () => {
+    if (el.naturalWidth <= 1) tryNext();
+  });
+  tryNext();
 }

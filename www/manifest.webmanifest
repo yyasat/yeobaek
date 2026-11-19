@@ -1,21 +1,40 @@
 {
-  "name": "여백 · 留白",
-  "short_name": "여백",
-  "description": "低饱和浅蓝的安静浏览器外壳",
+  "name": "见素",
+  "short_name": "见素",
+  "description": "见素抱朴 · 低饱和浅蓝的安静浏览器",
   "start_url": "./index.html",
   "scope": "./",
+  "id": "/jiansu/",
   "display": "standalone",
   "display_override": ["fullscreen", "standalone", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#EEF2F5",
-  "theme_color": "#EEF2F5",
+  "background_color": "#EDF1F4",
+  "theme_color": "#EDF1F4",
   "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities"],
   "icons": [
-    { "src": "./assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "./assets/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    {
+      "src": "https://i.postimg.cc/xdPCQwcX/jian-su-xing-huan-rou-wu-bi-zhi-2026-11-20T031817-501.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.postimg.cc/xdPCQwcX/jian-su-xing-huan-rou-wu-bi-zhi-2026-11-20T031817-501.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
   ],
   "shortcuts": [
-    { "name": "控制台", "url": "./index.html#console" },
-    { "name": "标签页", "url": "./index.html#tabs" }
+    { "name": "控制台", "short_name": "控制台", "url": "./index.html#console" },
+    { "name": "标签页", "short_name": "标签", "url": "./index.html#tabs" }
   ]
 }

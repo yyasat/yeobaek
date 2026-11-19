@@ -1,97 +1,96 @@
 /* ─────────────────────────────────────────────────────────────
-   여백 · design tokens
-   低饱和偏灰的浅蓝色系。六套主题都收在同一个蓝灰色相带里，
-   只在中性度、明度与一点点温度上做区分，保证切换时不跳戏。
-   颜色以「底色 / 浮起 / 线 / 字 / 弱字 / 强调」六层组织。
+   见素 · 设计变量
+   「见素抱朴」——素是未染的丝。整套界面只用未上色的底、
+   一层极浅的蓝灰、一根 1px 的线，把彩度全部让给内容。
    ───────────────────────────────────────────────────────────── */
 
 :root {
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
   --s5: 20px; --s6: 24px; --s7: 32px; --s8: 44px; --s9: 64px;
 
-  --r-sm: 8px; --r-md: 14px; --r-lg: 20px; --r-xl: 26px; --r-full: 999px;
+  --r-sm: 8px; --r-md: 13px; --r-lg: 19px; --r-xl: 25px; --r-full: 999px;
 
-  --font: "Pretendard", "SUIT", -apple-system, BlinkMacSystemFont,
-          "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans SC",
-          "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  --font-num: "SF Mono", "JetBrains Mono", ui-monospace, "Menlo", monospace;
+  --font: "PingFang SC", "HarmonyOS Sans SC", "Noto Sans SC",
+          "Source Han Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC",
+                "STSong", "SimSun", serif;
+  --font-num: "SF Mono", ui-monospace, "Menlo", "Consolas", monospace;
 
   --fs: 15px;
   --dur: 200ms;
   --ease: cubic-bezier(.22, .61, .36, 1);
 
+  /* 原生层会把这些覆盖成真实 inset */
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
   --safe-r: env(safe-area-inset-right, 0px);
 
   --bar-h: 52px;
-  --tab-h: 60px;
+  --tab-h: 58px;
 
-  --danger: #A2645E;
-  --danger-line: rgba(162,100,94,.34);
-  --danger-wash: rgba(162,100,94,.09);
+  --danger: #A2655F;
+  --danger-line: rgba(162,101,95,.32);
 }
 
-/* 1 · 하늘 — 浅蓝灰，默认 */
-[data-theme="haneul"] {
-  --bg:#EEF2F5; --elev:#F8FAFB; --elev-2:#E2E9EE;
-  --line:rgba(28,38,48,.10); --line-strong:rgba(28,38,48,.20);
-  --fg:#1E272E; --fg-dim:#6D7B85; --fg-faint:#9BA7B0;
-  --accent:#6C8296; --accent-ink:#F8FAFB; --accent-wash:rgba(108,130,150,.14);
-  --shadow:0 1px 2px rgba(28,38,48,.05), 0 12px 28px -18px rgba(28,38,48,.32);
-  --scheme: light;
+/* 素 · 未染的蓝灰（默认，日间） */
+[data-theme="su"] {
+  --bg:#EDF1F4; --elev:#F8FAFB; --elev-2:#E1E8ED;
+  --line:rgba(27,36,43,.10); --line-strong:rgba(27,36,43,.20);
+  --fg:#1B242B; --fg-dim:#6C7A84; --fg-faint:#9AA6AE;
+  --accent:#5D7688; --accent-ink:#F8FAFB; --accent-wash:rgba(93,118,136,.13);
+  --shadow:0 1px 2px rgba(27,36,43,.05), 0 10px 24px -18px rgba(27,36,43,.32);
 }
 
-/* 2 · 물안개 — 更灰一层，几乎无彩 */
-[data-theme="mulan-gae"] {
-  --bg:#EDF0F2; --elev:#F7F9FA; --elev-2:#E0E6E9;
-  --line:rgba(30,38,44,.10); --line-strong:rgba(30,38,44,.20);
-  --fg:#1F272B; --fg-dim:#6B7880; --fg-faint:#9AA5AB;
-  --accent:#6B7C88; --accent-ink:#F7F9FA; --accent-wash:rgba(107,124,136,.14);
-  --shadow:0 1px 2px rgba(30,38,44,.05), 0 12px 28px -18px rgba(30,38,44,.32);
-  --scheme: light;
+/* 雾 · 更灰一档 */
+[data-theme="wu"] {
+  --bg:#EEF0F1; --elev:#F8F9F9; --elev-2:#E2E6E7;
+  --line:rgba(30,37,40,.10); --line-strong:rgba(30,37,40,.20);
+  --fg:#1F2629; --fg-dim:#6B777B; --fg-faint:#9AA4A7;
+  --accent:#6A7C85; --accent-ink:#F8F9F9; --accent-wash:rgba(106,124,133,.13);
+  --shadow:0 1px 2px rgba(30,37,40,.05), 0 10px 24px -18px rgba(30,37,40,.32);
 }
 
-/* 3 · 청회 — 蓝调更明显一格 */
-[data-theme="cheonghoe"] {
-  --bg:#E9EEF2; --elev:#F6F9FB; --elev-2:#DAE3EA;
-  --line:rgba(24,36,46,.11); --line-strong:rgba(24,36,46,.21);
-  --fg:#1C262E; --fg-dim:#64737E; --fg-faint:#95A3AD;
-  --accent:#5C7488; --accent-ink:#F6F9FB; --accent-wash:rgba(92,116,136,.14);
-  --shadow:0 1px 2px rgba(24,36,46,.06), 0 12px 28px -18px rgba(24,36,46,.34);
-  --scheme: light;
+/* 青灰 · 蓝调更明确 */
+[data-theme="qinghui"] {
+  --bg:#E8EEF2; --elev:#F6F9FB; --elev-2:#D9E3EA;
+  --line:rgba(23,35,45,.11); --line-strong:rgba(23,35,45,.21);
+  --fg:#1A242C; --fg-dim:#63727D; --fg-faint:#949FA9;
+  --accent:#527085; --accent-ink:#F6F9FB; --accent-wash:rgba(82,112,133,.13);
+  --shadow:0 1px 2px rgba(23,35,45,.06), 0 10px 24px -18px rgba(23,35,45,.34);
 }
 
-/* 4 · 먹 — 夜间，同色相压暗 */
-[data-theme="meok"] {
-  --bg:#151A1E; --elev:#1C2227; --elev-2:#262E34;
+/* 墨 · 夜间 */
+[data-theme="mo"] {
+  --bg:#141A1E; --elev:#1B2227; --elev-2:#252E34;
   --line:rgba(226,235,241,.10); --line-strong:rgba(226,235,241,.22);
-  --fg:#E4EBF0; --fg-dim:#87949C; --fg-faint:#5D6971;
-  --accent:#8FA5B4; --accent-ink:#151A1E; --accent-wash:rgba(143,165,180,.16);
-  --shadow:0 1px 2px rgba(0,0,0,.4), 0 18px 34px -20px rgba(0,0,0,.85);
-  --scheme: dark;
-  --danger:#C0837C; --danger-line:rgba(192,131,124,.34); --danger-wash:rgba(192,131,124,.12);
+  --fg:#E3EAF0; --fg-dim:#85929A; --fg-faint:#5B676F;
+  --accent:#8CA3B3; --accent-ink:#141A1E; --accent-wash:rgba(140,163,179,.16);
+  --shadow:0 1px 2px rgba(0,0,0,.42), 0 16px 30px -20px rgba(0,0,0,.85);
+  --danger:#C0837C; --danger-line:rgba(192,131,124,.32);
 }
 
-/* 5 · 조약돌 — 掺一点石头的暖，仍守在蓝灰里 */
-[data-theme="joyakdol"] {
-  --bg:#ECEFF0; --elev:#F7F9F9; --elev-2:#DFE4E5;
-  --line:rgba(30,37,39,.10); --line-strong:rgba(30,37,39,.20);
-  --fg:#1E2626; --fg-dim:#66777A; --fg-faint:#96A4A6;
-  --accent:#6B8487; --accent-ink:#F7F9F9; --accent-wash:rgba(107,132,135,.14);
-  --shadow:0 1px 2px rgba(30,37,39,.05), 0 12px 28px -18px rgba(30,37,39,.32);
-  --scheme: light;
+/* 卵石 · 掺一点石灰的暖 */
+[data-theme="luanshi"] {
+  --bg:#EBEEEE; --elev:#F7F9F9; --elev-2:#DEE3E4;
+  --line:rgba(29,36,37,.10); --line-strong:rgba(29,36,37,.20);
+  --fg:#1D2525; --fg-dim:#65767A; --fg-faint:#95A3A5;
+  --accent:#66807F; --accent-ink:#F7F9F9; --accent-wash:rgba(102,128,127,.13);
+  --shadow:0 1px 2px rgba(29,36,37,.05), 0 10px 24px -18px rgba(29,36,37,.32);
 }
 
-/* 6 · 새벽 — 蓝里带一丝紫，收得更冷 */
-[data-theme="saebyeok"] {
-  --bg:#EDEFF5; --elev:#F8F9FC; --elev-2:#E1E4ED;
-  --line:rgba(29,33,44,.10); --line-strong:rgba(29,33,44,.20);
-  --fg:#1F2530; --fg-dim:#6A7180; --fg-faint:#98A0AF;
-  --accent:#7080A0; --accent-ink:#F8F9FC; --accent-wash:rgba(112,128,160,.14);
-  --shadow:0 1px 2px rgba(29,33,44,.05), 0 12px 28px -18px rgba(29,33,44,.32);
-  --scheme: light;
+/* 拂晓 · 蓝里带一丝紫 */
+[data-theme="fuxiao"] {
+  --bg:#ECEFF5; --elev:#F8F9FC; --elev-2:#E0E4EE;
+  --line:rgba(28,32,43,.10); --line-strong:rgba(28,32,43,.20);
+  --fg:#1E242F; --fg-dim:#697080; --fg-faint:#97A0AF;
+  --accent:#6B7C9E; --accent-ink:#F8F9FC; --accent-wash:rgba(107,124,158,.13);
+  --shadow:0 1px 2px rgba(28,32,43,.05), 0 10px 24px -18px rgba(28,32,43,.32);
+}
+
+/* 自定义（用户配色会写到行内变量，这里只兜底） */
+[data-theme="custom"] {
+  --shadow:0 1px 2px rgba(0,0,0,.06), 0 10px 24px -18px rgba(0,0,0,.36);
 }
 
 @media (prefers-reduced-motion: reduce) {

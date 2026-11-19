@@ -28,31 +28,71 @@ jobs:
       - name: Verify web assets
         run: |
           test -f www/index.html || { echo "missing www/index.html"; exit 1; }
-          du -sh www
 
       - name: Generate Android project
         run: npx cap add android
 
-      - name: Inject native plugin and activity
+      - name: Inject native sources
         run: |
           DEST=android/app/src/main/java/com/yeobaek/browser
           mkdir -p "$DEST"
           cp native/android/MainActivity.java "$DEST/"
-          cp native/android/YeobaekNativePlugin.java "$DEST/"
-          ls -l "$DEST"
+          cp native/android/JianSuNativePlugin.java "$DEST/"
+          cp native/android/TabHost.java "$DEST/"
 
-      - name: Add internet permission
+          RES=android/app/src/main/res/xml
+          mkdir -p "$RES"
+          cp native/android/file_paths.xml "$RES/"
+          ls -l "$DEST" "$RES"
+
+      - name: Patch AndroidManifest and app strings
         run: |
           python3 - <<'PY'
-          import pathlib
+          import pathlib, re
+
+          # 1. 权限 + FileProvider
           p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
-          if "INTERNET" not in s:
-              s = s.replace('<application',
-                  '<uses-permission android:name="android.permission.INTERNET"/>\n'
-                  '    <uses-permission android:name="android.permission.INSTALL_SHORTCUT"/>\n'
-                  '    <application', 1)
-              p.write_text(s)
+
+          perms = [
+              "android.permission.INTERNET",
+              "android.permission.INSTALL_SHORTCUT",
+              "android.permission.POST_NOTIFICATIONS",
+              "android.permission.REQUEST_INSTALL_PACKAGES",
+              "android.permission.WRITE_EXTERNAL_STORAGE",
+          ]
+          block = "".join(
+              f'    <uses-permission android:name="{x}"/>\n' for x in perms
+              if x not in s
+          )
+          if block:
+              s = s.replace("<application", block + "    <application", 1)
+
+          if "FileProvider" not in s:
+              provider = (
+                  '        <provider\n'
+                  '            android:name="androidx.core.content.FileProvider"\n'
+                  '            android:authorities="${applicationId}.fileprovider"\n'
+                  '            android:exported="false"\n'
+                  '            android:grantUriPermissions="true">\n'
+                  '            <meta-data\n'
+                  '                android:name="android.support.FILE_PROVIDER_PATHS"\n'
+                  '                android:resource="@xml/file_paths" />\n'
+                  '        </provider>\n'
+              )
+              s = s.replace("</application>", provider + "    </application>", 1)
+
+          p.write_text(s)
+
+          # 2. 应用名改成「见素」
+          st = pathlib.Path("android/app/src/main/res/values/strings.xml")
+          t = st.read_text()
+          t = re.sub(r'<string name="app_name">.*?</string>',
+                     '<string name="app_name">见素</string>', t)
+          t = re.sub(r'<string name="title_activity_main">.*?</string>',
+                     '<string name="title_activity_main">见素</string>', t)
+          st.write_text(t)
+          print("manifest patched")
           PY
 
       - name: Sync web assets
@@ -62,11 +102,11 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: yeobaek-debug-apk
+          name: jiansu-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
