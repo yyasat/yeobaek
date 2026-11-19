@@ -96,10 +96,14 @@ export async function applyInsets() {
 
 /* ── 原生 WebView 网页层 ─────────────────────────────────── */
 export const webview = {
-  async open({ id, url }) {
+  async open({ id, url, mode }) {
     if (!isNative()) return { ok: false, mode: 'web' };
-    try { return await call('openWebView', { id, url }); }
+    try { return await call('openWebView', { id, url, mode: mode ?? 2 }); }
     catch (e) { return { ok: false, error: String(e?.message || e) }; }
+  },
+  async setMode(id, mode) {
+    if (!isNative()) return;
+    try { await call('setWebViewMode', { id, mode }); } catch {}
   },
   async close(id) {
     if (!isNative()) return;
@@ -145,11 +149,12 @@ export const webview = {
 };
 
 /* ── 桌面快捷方式 / PWA ──────────────────────────────────── */
-export async function addShortcut({ url, title, icon }) {
+export async function addShortcut({ url, title, icon, mode }) {
   if (isNative()) {
     try {
       const r = await call('addShortcut', {
         url, title, icon: icon || '', shortLabel: (title || '').slice(0, 8),
+        mode: mode ?? 3,   // 桌面快捷方式默认完全全屏
       });
       return { ok: true, ...r };
     } catch (e) { return { ok: false, error: String(e?.message || e) }; }
@@ -282,6 +287,16 @@ export async function installApk(url) {
   return false;
 }
 
+/** 从外部链接进入时带的网址与全屏模式。 */
+export async function rawLaunchUrl() {
+  if (!isNative()) return null;
+  try {
+    const r = await call('getLaunchUrl');
+    if (!r?.url) return null;
+    return { url: r.url, mode: Number(r.mode || 0) };
+  } catch { return null; }
+}
+
 /* ── 系统返回键 ──────────────────────────────────────────── */
 export function onBackButton(handler) {
   if (!isNative()) {
@@ -289,11 +304,28 @@ export function onBackButton(handler) {
     window.addEventListener('popstate', () => handler());
     return;
   }
+  // Capacitor 5+ 不再把 App 挂到 Plugins 上，必须用 registerPlugin 拿
   try {
-    cap()?.Plugins?.App?.addListener('backButton', () => handler());
+    const App = cap()?.registerPlugin?.('App');
+    if (App?.addListener) {
+      App.addListener('backButton', () => handler());
+      return;
+    }
+  } catch {}
+
+  // 兜底：注册失败也不要让返回键直接退出应用
+  try {
+    const bridge = cap();
+    if (bridge?.Plugins) {
+      bridge.Plugins.App = bridge.Plugins.App || cap().registerPlugin?.('App');
+    }
   } catch {}
 }
 
 export function exitApp() {
+  try {
+    const App = cap()?.registerPlugin?.('App');
+    if (App?.exitApp) { App.exitApp(); return; }
+  } catch {}
   try { cap()?.Plugins?.App?.exitApp?.(); } catch {}
 }

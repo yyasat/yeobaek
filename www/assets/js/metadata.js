@@ -31,8 +31,23 @@ export function searchUrl(q, engine = 'bing') {
     bing: 'https://www.bing.com/search?q=',
     baidu: 'https://www.baidu.com/s?wd=',
     google: 'https://www.google.com/search?q=',
+    sogou: 'https://www.sogou.com/web?query=',
+    so360: 'https://www.so.com/s?q=',
+    duck: 'https://duckduckgo.com/?q=',
+    brave: 'https://search.brave.com/search?q=',
+    startpage: 'https://www.startpage.com/sp/search?query=',
   };
   return (map[engine] || map.bing) + encodeURIComponent(q);
+}
+
+/** 搜索词拼进自定义模板，{q} 为占位符。 */
+export function customSearchUrl(q, template) {
+  if (!template) return null;
+  const base = String(template).trim();
+  if (!base.includes('{q}')) {
+    return base.replace(/\/?$/, '/') + encodeURIComponent(q);
+  }
+  return base.replace('{q}', encodeURIComponent(q));
 }
 
 export function hostOf(url) {

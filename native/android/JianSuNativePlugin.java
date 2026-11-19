@@ -1,6 +1,5 @@
 package com.yeobaek.browser;
 
-import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -18,21 +17,11 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Base64;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
-import android.view.WindowManager;
 import android.webkit.CookieManager;
-import android.webkit.DownloadListener;
-import android.webkit.JavascriptInterface;
-import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebSettings;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
 
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -52,35 +41,30 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-/**
- * 见素 原生桥。
- *
- * 核心是 TabHost：每个标签一个真正的 WebView，叠在 Capacitor 的壳 WebView 之上。
- * 因为页面跑在同进程的原生 WebView 里，evaluateJavascript 可以直接读写它的 DOM，
- * 不存在 iframe 的同源限制。
- */
 @CapacitorPlugin(name = "JianSuNative")
 public class JianSuNativePlugin extends Plugin {
 
-    private static final int REQ_PERM_BASE = 5300;
+    private static final int REQ_NOTIF = 5301;
 
     private TabHost tabHost;
-    private final Map<String, Integer> pendingPerms = new HashMap<>();
-
-    /* ── 生命周期 ──────────────────────────────────────────── */
+    private PluginCall pendingPermCall;
 
     private TabHost host() {
         if (tabHost == null) {
             tabHost = new TabHost(getActivity(), getBridge().getWebView());
             tabHost.attach();
+            tabHost.setConsoleListener(tabId -> notifyConsole(tabId));
         }
         return tabHost;
+    }
+
+    /** 网页里点浮钮 → 通知前端切到控制台视图。 */
+    private void notifyConsole(String tabId) {
+        JSObject data = new JSObject();
+        data.put("tabId", tabId);
+        notifyListeners("consoleRequested", data);
     }
 
     @Override
@@ -109,11 +93,8 @@ public class JianSuNativePlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             Window w = getActivity().getWindow();
             WindowCompat.setDecorFitsSystemWindows(w, false);
-
-            // 栏底透明：网页底色自己延伸到状态栏后面，换主题即换色
             w.setStatusBarColor(Color.TRANSPARENT);
             w.setNavigationBarColor(Color.TRANSPARENT);
-
             WindowInsetsControllerCompat c =
                     WindowCompat.getInsetsController(w, w.getDecorView());
             c.setAppearanceLightStatusBars(darkIcons);
@@ -123,33 +104,68 @@ public class JianSuNativePlugin extends Plugin {
         });
     }
 
-    /** 把真实安全区高度交给网页，避免顶栏压在状态栏文字上。 */
     @PluginMethod
     public void getInsets(PluginCall call) {
         View root = getActivity().getWindow().getDecorView();
         WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(root);
+        float d = getActivity().getResources().getDisplayMetrics().density;
 
         JSObject r = new JSObject();
-        float density = getActivity().getResources().getDisplayMetrics().density;
-
         if (insets != null) {
             androidx.core.graphics.Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             androidx.core.graphics.Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
-            r.put("top", bars.top / density);
-            r.put("bottom", Math.max(bars.bottom, ime.bottom) / density);
-            r.put("left", bars.left / density);
-            r.put("right", bars.right / density);
-            r.put("imeBottom", ime.bottom / density);
-            r.put("imeVisible", insets.isVisible(WindowInsetsCompat.Type.ime()));
+            r.put("top", bars.top / d);
+            r.put("bottom", Math.max(bars.bottom, ime.bottom) / d);
+            r.put("left", bars.left / d);
+            r.put("right", bars.right / d);
+            r.put("imeBottom", ime.bottom / d);
         } else {
-            r.put("top", 24);
-            r.put("bottom", 0);
-            r.put("left", 0);
-            r.put("right", 0);
-            r.put("imeBottom", 0);
-            r.put("imeVisible", false);
+            r.put("top", 24); r.put("bottom", 0); r.put("left", 0); r.put("right", 0); r.put("imeBottom", 0);
         }
         call.resolve(r);
+    }
+
+    /**
+     * 返回键的退栈顺序，全程不销毁 WebView：
+     *   1. 当前网页还能后退 → 后退
+     *   2. 网页层开着 → 收起，回到外壳
+     *   3. 外壳不在首页 → 回首页
+     *   4. 都不满足 → 返回 false，由 Activity 最小化到后台
+     */
+    public boolean handleBack() {
+        if (tabHost == null) return false;
+
+        String id = tabHost.currentId();
+        if (id != null) {
+            TabHost.Tab t = tabHost.get(id);
+            if (t != null && t.web.canGoBack()) {
+                getActivity().runOnUiThread(() -> t.web.goBack());
+                return true;
+            }
+        }
+
+        // 让前端收网页层 / 回首页；前端处理后返回 true
+        final boolean[] handled = {false};
+        final java.util.concurrent.CountDownLatch latch =
+                new java.util.concurrent.CountDownLatch(1);
+
+        getActivity().runOnUiThread(() -> {
+            try {
+                getBridge().getWebView().evaluateJavascript(
+                    "(function(){return (window.__jiansuBack&&window.__jiansuBack())?'1':'0'})()",
+                    value -> {
+                        handled[0] = value != null && value.contains("1");
+                        latch.countDown();
+                    });
+            } catch (Exception e) {
+                latch.countDown();
+            }
+        });
+
+        try { latch.await(320, java.util.concurrent.TimeUnit.MILLISECONDS); }
+        catch (InterruptedException ignored) {}
+
+        return handled[0];
     }
 
     /* ── 网页层 ────────────────────────────────────────────── */
@@ -158,16 +174,24 @@ public class JianSuNativePlugin extends Plugin {
     public void openWebView(PluginCall call) {
         String id = call.getString("id");
         String url = call.getString("url");
+        int mode = call.getInt("mode", TabHost.MODE_STATUS);
         if (id == null || url == null) { call.reject("缺少参数"); return; }
 
         getActivity().runOnUiThread(() -> {
-            TabHost.Tab t = host().open(id, url);
+            TabHost.Tab t = host().open(id, url, mode);
             JSObject r = new JSObject();
             r.put("ok", t != null);
             r.put("title", t == null ? "" : t.title());
-            r.put("url", url);
             call.resolve(r);
         });
+    }
+
+    @PluginMethod
+    public void setWebViewMode(PluginCall call) {
+        String id = call.getString("id");
+        int mode = call.getInt("mode", TabHost.MODE_STATUS);
+        getActivity().runOnUiThread(() -> host().applyMode(id, mode));
+        call.resolve();
     }
 
     @PluginMethod
@@ -198,7 +222,7 @@ public class JianSuNativePlugin extends Plugin {
             JSObject r = new JSObject();
             if (t != null && t.web.canGoBack()) {
                 t.web.goBack();
-                r.put("canGoBack", t.web.canGoBack());
+                r.put("canGoBack", true);
             } else {
                 r.put("canGoBack", false);
             }
@@ -206,6 +230,10 @@ public class JianSuNativePlugin extends Plugin {
         });
     }
 
+    /**
+     * 后退：先在网页历史里退，退不动就逐级退应用层级。
+     * 返回 handled=false 表示调用方该退一层界面。
+     */
     @PluginMethod
     public void webViewForward(PluginCall call) {
         String id = call.getString("id");
@@ -214,7 +242,7 @@ public class JianSuNativePlugin extends Plugin {
             JSObject r = new JSObject();
             if (t != null && t.web.canGoForward()) {
                 t.web.goForward();
-                r.put("canGoForward", t.web.canGoForward());
+                r.put("canGoForward", true);
             } else {
                 r.put("canGoForward", false);
             }
@@ -232,10 +260,6 @@ public class JianSuNativePlugin extends Plugin {
         call.resolve();
     }
 
-    /**
-     * 在网页自身的上下文里执行 JS。
-     * 这是整套「完全体控制台」的关键：不受同源策略限制。
-     */
     @PluginMethod
     public void webViewEval(PluginCall call) {
         String id = call.getString("id");
@@ -252,7 +276,6 @@ public class JianSuNativePlugin extends Plugin {
                 return;
             }
 
-            // 包一层：捕获异常并把 console.log 一起带回来
             String wrapped =
                 "(function(){try{"
               + "var __o=[];var __ol=console.log;"
@@ -269,12 +292,10 @@ public class JianSuNativePlugin extends Plugin {
                 JSObject out = new JSObject();
                 if (result == null || "null".equals(result)) {
                     out.put("ok", true);
-                    out.put("value", null);
                     call.resolve(out);
                     return;
                 }
                 try {
-                    // evaluateJavascript 返回的是 JSON 字符串字面量，先解一层
                     String json = result;
                     if (json.startsWith("\"") && json.endsWith("\"")) {
                         json = new org.json.JSONArray("[" + json + "]").getString(0);
@@ -316,9 +337,7 @@ public class JianSuNativePlugin extends Plugin {
         int zoom = call.getInt("zoom", 100);
         getActivity().runOnUiThread(() -> {
             TabHost.Tab t = host().get(id);
-            if (t != null) {
-                t.web.getSettings().setTextZoom(Math.max(50, Math.min(200, zoom)));
-            }
+            if (t != null) t.web.getSettings().setTextZoom(Math.max(50, Math.min(200, zoom)));
         });
         call.resolve();
     }
@@ -326,21 +345,16 @@ public class JianSuNativePlugin extends Plugin {
     @PluginMethod
     public void setKeepAlive(PluginCall call) {
         String id = call.getString("id");
-        boolean enabled = call.getBoolean("enabled", true);
+        boolean on = call.getBoolean("enabled", true);
         getActivity().runOnUiThread(() -> {
             TabHost.Tab t = host().get(id);
-            if (t != null) t.keepAlive = enabled;
+            if (t != null) t.keepAlive = on;
         });
         call.resolve();
     }
 
-    /* ── 数据清除（第 21 条：不再闪退）──────────────────────── */
+    /* ── 数据清除（不闪退）────────────────────────────────── */
 
-    /**
-     * 旧版会把整个 WebView 的缓存一起清掉，正在渲染的页面拿到空对象直接崩。
-     * 现在：先把该站点的页面移出视图树并销毁，再在 UI 线程上清理，
-     * 每一步都单独 try/catch，任何一项失败都不影响其余步骤。
-     */
     @PluginMethod
     public void clearSiteData(PluginCall call) {
         String rawUrl = call.getString("url", "");
@@ -348,7 +362,6 @@ public class JianSuNativePlugin extends Plugin {
         try { host = Uri.parse(rawUrl).getHost(); } catch (Exception ignored) {}
 
         final String fHost = host == null ? "" : host;
-        final String fUrl = rawUrl;
 
         getActivity().runOnUiThread(() -> {
             try { host().closeByHost(fHost); } catch (Exception ignored) {}
@@ -360,7 +373,6 @@ public class JianSuNativePlugin extends Plugin {
                         String probe = "https://" + fHost + "/";
                         String cookies = null;
                         try { cookies = cm.getCookie(probe); } catch (Exception ignored) {}
-
                         if (cookies != null) {
                             for (String pair : cookies.split(";")) {
                                 String name = pair.split("=")[0].trim();
@@ -372,18 +384,7 @@ public class JianSuNativePlugin extends Plugin {
                         try { cm.flush(); } catch (Exception ignored) {}
                         try { WebStorage.getInstance().deleteOrigin(probe); } catch (Exception ignored) {}
                     }
-
-                    // 只清这个站点，不再碰全局缓存
-                    TabHost.Tab probeTab = host().get(fUrl);
-                    if (probeTab != null) {
-                        try {
-                            probeTab.web.clearHistory();
-                            probeTab.web.clearFormData();
-                        } catch (Exception ignored) {}
-                    }
-                } catch (Throwable ignored) {
-                    // 兜底：任何异常都不向 JS 冒泡，避免连锁崩溃
-                }
+                } catch (Throwable ignored) {}
 
                 JSObject r = new JSObject();
                 r.put("ok", true);
@@ -422,7 +423,6 @@ public class JianSuNativePlugin extends Plugin {
 
         android.content.pm.ShortcutManager sm =
                 getContext().getSystemService(android.content.pm.ShortcutManager.class);
-
         if (sm == null || !sm.isRequestPinShortcutSupported()) {
             call.reject("当前桌面不支持固定快捷方式");
             return;
@@ -432,6 +432,9 @@ public class JianSuNativePlugin extends Plugin {
         intent.setAction(Intent.ACTION_VIEW);
         intent.setData(Uri.parse(url));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // 桌面快捷方式默认完全全屏（模式③），按站点设置可覆盖
+        int mode = call.getInt("mode", TabHost.MODE_IMMERSIVE);
+        intent.putExtra("jiansu_mode", mode);
 
         android.content.pm.ShortcutInfo info =
                 new android.content.pm.ShortcutInfo.Builder(getContext(), "js_" + Math.abs(url.hashCode()))
@@ -441,9 +444,8 @@ public class JianSuNativePlugin extends Plugin {
                         .setIntent(intent)
                         .build();
 
-        boolean ok = sm.requestPinShortcut(info, null);
         JSObject r = new JSObject();
-        r.put("ok", ok);
+        r.put("ok", sm.requestPinShortcut(info, null));
         call.resolve(r);
     }
 
@@ -463,7 +465,6 @@ public class JianSuNativePlugin extends Plugin {
         call.resolve();
     }
 
-    /** 用名称首字画一个高清图标，和网页里的字母占位一致。 */
     private Bitmap letterIcon(String label) {
         int size = 432;
         Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
@@ -497,32 +498,29 @@ public class JianSuNativePlugin extends Plugin {
     @PluginMethod
     public void requestPermission(PluginCall call) {
         String type = call.getString("type", "");
-        String perm;
 
-        switch (type) {
-            case "notifications":
-                if (Build.VERSION.SDK_INT < 33) {
-                    JSObject ok = new JSObject();
-                    ok.put("granted", true);
-                    ok.put("status", "granted");
-                    call.resolve(ok);
-                    return;
-                }
-                perm = "android.permission.POST_NOTIFICATIONS";
-                break;
-            case "clipboard-read":
-            case "clipboard-write":
-                // 剪贴板在 Android 上无需运行时权限，直接放行
-                JSObject cl = new JSObject();
-                cl.put("granted", true);
-                cl.put("status", "granted");
-                call.resolve(cl);
-                return;
-            default:
-                call.reject("未知权限类型");
-                return;
+        if ("clipboard-read".equals(type) || "clipboard-write".equals(type)) {
+            JSObject r = new JSObject();
+            r.put("granted", true);
+            r.put("status", "granted");
+            call.resolve(r);
+            return;
         }
 
+        if (!"notifications".equals(type)) {
+            call.reject("未知权限类型");
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT < 33) {
+            JSObject r = new JSObject();
+            r.put("granted", true);
+            r.put("status", "granted");
+            call.resolve(r);
+            return;
+        }
+
+        String perm = "android.permission.POST_NOTIFICATIONS";
         if (getActivity().checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) {
             JSObject r = new JSObject();
             r.put("granted", true);
@@ -531,25 +529,21 @@ public class JianSuNativePlugin extends Plugin {
             return;
         }
 
-        int code = REQ_PERM_BASE + pendingPerms.size();
-        pendingPerms.put(String.valueOf(code), 1);
-        getActivity().requestPermissions(new String[]{perm}, code);
-
-        // 结果通过 handleRequestPermissionsResult 回调，这里先保留 call
-        bridge.saveCall(call);
+        pendingPermCall = call;
+        getActivity().requestPermissions(new String[]{perm}, REQ_NOTIF);
     }
 
-    @Override
     public void handleRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.handleRequestPermissionsResult(requestCode, permissions, grantResults);
         boolean granted = grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
 
-        PluginCall saved = bridge.getSavedCall("perm:" + requestCode);
-        JSObject r = new JSObject();
-        r.put("granted", granted);
-        r.put("status", granted ? "granted" : "denied");
-        if (saved != null) { saved.resolve(r); bridge.releaseCall(saved); }
+        if (pendingPermCall != null) {
+            JSObject r = new JSObject();
+            r.put("granted", granted);
+            r.put("status", granted ? "granted" : "denied");
+            pendingPermCall.resolve(r);
+            pendingPermCall = null;
+        }
     }
 
     /* ── 剪贴板 ────────────────────────────────────────────── */
@@ -585,7 +579,7 @@ public class JianSuNativePlugin extends Plugin {
         }
     }
 
-    /* ── 网络（给标题抓取用，绕过 CORS）────────────────────── */
+    /* ── 网络（标题抓取，绕过 CORS）────────────────────────── */
 
     @PluginMethod
     public void httpGet(PluginCall call) {
@@ -614,8 +608,7 @@ public class JianSuNativePlugin extends Plugin {
 
                 java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
                 byte[] chunk = new byte[8192];
-                int n;
-                int total = 0;
+                int n, total = 0;
                 while ((n = in.read(chunk)) > 0 && total < 262144) {
                     buf.write(chunk, 0, n);
                     total += n;
@@ -654,32 +647,22 @@ public class JianSuNativePlugin extends Plugin {
                 conn.connect();
 
                 int status = conn.getResponseCode();
-                if (status < 200 || status >= 400) {
-                    call.reject("下载失败：" + status);
-                    return;
-                }
+                if (status < 200 || status >= 400) { call.reject("下载失败：" + status); return; }
 
                 long expected = conn.getContentLengthLong();
                 InputStream in = conn.getInputStream();
                 FileOutputStream out = new FileOutputStream(apk);
-
                 byte[] buf = new byte[16384];
                 long written = 0;
                 int n;
-                while ((n = in.read(buf)) > 0) {
-                    out.write(buf, 0, n);
-                    written += n;
-                }
+                while ((n = in.read(buf)) > 0) { out.write(buf, 0, n); written += n; }
                 out.flush();
-                out.getFD().sync();   // 确保落盘，避免安装时读到半截文件
+                out.getFD().sync();
                 out.close();
                 in.close();
                 conn.disconnect();
 
-                if (expected > 0 && written != expected) {
-                    call.reject("文件不完整");
-                    return;
-                }
+                if (expected > 0 && written != expected) { call.reject("文件不完整"); return; }
 
                 Intent it = new Intent(Intent.ACTION_VIEW);
                 it.setDataAndType(
@@ -696,5 +679,24 @@ public class JianSuNativePlugin extends Plugin {
                 call.reject(String.valueOf(e.getMessage()));
             }
         }).start();
+    }
+
+    /* ── 从外部链接进入（默认浏览器注册）─────────────────── */
+
+    @PluginMethod
+    public void getLaunchUrl(PluginCall call) {
+        JSObject r = new JSObject();
+        String url = "";
+        int mode = 0;
+        try {
+            Intent it = getActivity().getIntent();
+            if (it != null) {
+                if (it.getData() != null) url = it.getData().toString();
+                mode = it.getIntExtra("jiansu_mode", 0);
+            }
+        } catch (Exception ignored) {}
+        r.put("url", url);
+        r.put("mode", mode);
+        call.resolve(r);
     }
 }

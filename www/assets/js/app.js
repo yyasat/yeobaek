@@ -4,7 +4,7 @@
 
 import * as store from './store.js';
 import * as native from './native.js';
-import { normalizeUrl, isSearchQuery, searchUrl, hostOf, prettyName, resolveMeta, faviconCandidates } from './metadata.js';
+import { normalizeUrl, isSearchQuery, hostOf, prettyName, resolveMeta, faviconCandidates } from './metadata.js';
 import { TabManager } from './tabs.js';
 import { generate, pageFacts, SNIPPETS } from './ai.js';
 
@@ -17,6 +17,16 @@ const THEMES = [
   { id: 'mo',      name: '墨',   sw: ['#141A1E', '#252E34', '#8CA3B3', '#E3EAF0'] },
   { id: 'luanshi', name: '卵石', sw: ['#EBEEEE', '#DEE3E4', '#66807F', '#1D2525'] },
   { id: 'fuxiao',  name: '拂晓', sw: ['#ECEFF5', '#E0E4EE', '#6B7C9E', '#1E242F'] },
+];
+
+const DEFAULT_ENGINES = [
+  { id: 'bing',      name: '必应',   url: 'https://www.bing.com/search?q={q}',      icon: 'https://www.bing.com/favicon.ico' },
+  { id: 'baidu',     name: '百度',   url: 'https://www.baidu.com/s?wd={q}',          icon: 'https://www.baidu.com/favicon.ico' },
+  { id: 'google',    name: '谷歌',   url: 'https://www.google.com/search?q={q}',     icon: 'https://www.google.com/favicon.ico' },
+  { id: 'sogou',     name: '搜狗',   url: 'https://www.sogou.com/web?query={q}',     icon: 'https://www.sogou.com/favicon.ico' },
+  { id: 'so360',     name: '360',   url: 'https://www.so.com/s?q={q}',              icon: 'https://www.so.com/favicon.ico' },
+  { id: 'duck',      name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q={q}',       icon: 'https://duckduckgo.com/favicon.ico' },
+  { id: 'brave',     name: 'Brave',  url: 'https://search.brave.com/search?q={q}',   icon: 'https://search.brave.com/favicon.ico' },
 ];
 
 const DEFAULT_HERO = [
@@ -34,10 +44,10 @@ const el = (tag, cls, text) => {
 };
 
 const S = {
-  cats: [], favs: [], recent: [], heroLines: [], presets: [],
+  cats: [], favs: [], recent: [], heroLines: [], presets: [], engines: [],
   settings: {
     theme: 'su', dayNight: 'auto', fs: 15, zoom: 100, engine: 'bing',
-    customColor: null,
+    customColor: null, fullscreen: true,
   },
   activeCat: 'all',
   editing: false,
@@ -46,6 +56,22 @@ const S = {
 
 let tabs = null;
 let mediaQuery = null;
+
+/* ── 首帧同步水合 ─────────────────────────────────────────── */
+function hydrateSync() {
+  S.cats = store.getSync('cats', S.cats.length ? S.cats : [
+    { id: 'all', name: '全部' },
+    { id: 'read', name: '阅读' },
+    { id: 'tool', name: '工具' },
+    { id: 'later', name: '稍后' },
+  ]);
+  S.favs = store.getSync('favs', []);
+  S.recent = store.getSync('recent', []);
+  S.heroLines = store.getSync('heroLines', DEFAULT_HERO.slice());
+  S.presets = store.getSync('presets', []);
+  S.engines = store.getSync('engines', DEFAULT_ENGINES.slice());
+  S.settings = Object.assign(S.settings, store.getSync('settings', {}));
+}
 
 /* ── 载入 ─────────────────────────────────────────────────── */
 async function loadState() {
@@ -60,6 +86,7 @@ async function loadState() {
   S.recent = await store.get('recent', []);
   S.heroLines = await store.get('heroLines', DEFAULT_HERO.slice());
   S.presets = await store.get('presets', []);
+  S.engines = await store.get('engines', S.engines.length ? S.engines : DEFAULT_ENGINES.slice());
   S.settings = Object.assign(S.settings, await store.get('settings', {}));
 }
 
@@ -70,6 +97,7 @@ const saveRecent = () => save('recent', S.recent.slice(0, 30));
 const saveHero = () => save('heroLines', S.heroLines);
 const saveSettings = () => save('settings', S.settings);
 const savePresets = () => save('presets', S.presets);
+const saveEngines = () => save('engines', S.engines);
 
 /* ── 主题 ─────────────────────────────────────────────────── */
 function resolveTheme() {
@@ -259,6 +287,30 @@ function renderRecent() {
   });
 }
 
+/* ── 全屏模式（按网页，1 有顶栏 / 2 有状态栏 / 3 完全全屏）── */
+const MODE_LABEL = { 1: '有顶栏', 2: '有状态栏', 3: '完全全屏' };
+
+async function getPageMode(url) {
+  const host = hostOf(url);
+  const v = await store.get('mode:' + host, null);
+  if (v) return Number(v);
+  // 首次访问：默认模式②（无顶栏，保留系统状态栏，状态栏取页面色）
+  return 2;
+}
+
+async function setPageMode(host, mode) {
+  await store.set('mode:' + host, Number(mode));
+}
+
+/** 把当前标签的全屏模式同步到原生 + 页面壳。 */
+function applyPageMode(tab) {
+  if (!tab) return;
+  const m = Number(tab.mode || 2);
+  document.documentElement.classList.toggle('in-page-immersive', m === 3);
+  if (tabs?.nativeMode) native.webview.setMode(tab.id, m);
+  native.syncSystemBars();
+}
+
 /* ── 打开网页 ─────────────────────────────────────────────── */
 function pushRecent(url, title) {
   S.recent = [{ url, title, at: Date.now() }, ...S.recent.filter((r) => r.url !== url)].slice(0, 30);
@@ -266,20 +318,59 @@ function pushRecent(url, title) {
   renderRecent();
 }
 
-async function openUrl(raw, title) {
+async function openUrl(raw, title, forceMode) {
   const url = normalizeUrl(raw);
   if (!url) { toast('网址无法识别'); return; }
-  const saved = await store.get('zoom:' + hostOf(url), null);
-  await tabs.create(url, { title, zoom: saved || S.settings.zoom });
+  const host = hostOf(url);
+  const savedZoom = await store.get('zoom:' + host, null);
+  // 外部链接 / 桌面快捷方式会指定模式，否则读该站点的设置
+  const mode = forceMode ? Number(forceMode) : await getPageMode(url);
+
+  await tabs.create(url, { title, zoom: savedZoom || S.settings.zoom, mode });
   pushRecent(url, title || prettyName(url));
   syncBars();
+}
+
+function currentEngine() {
+  return S.engines.find((e) => e.id === S.settings.engine) || S.engines[0] || DEFAULT_ENGINES[0];
+}
+
+function renderEngineIcon() {
+  const btn = $('btnEngine');
+  if (!btn) return;
+  const caret = btn.querySelector('.engine-caret');
+  btn.querySelectorAll('img, .fallback').forEach((n) => n.remove());
+  const e = currentEngine();
+
+  let node;
+  if (e.icon) {
+    const img = document.createElement('img');
+    img.alt = '';
+    img.referrerPolicy = 'no-referrer';
+    img.src = e.icon;
+    img.addEventListener('error', () => {
+      const f = el('span', 'fallback', e.name.charAt(0));
+      img.replaceWith(f);
+    }, { once: true });
+    node = img;
+  } else {
+    node = el('span', 'fallback', e.name.charAt(0));
+  }
+  btn.insertBefore(node, caret);
+}
+
+function engineSearchUrl(q) {
+  const e = currentEngine();
+  return e.url.includes('{q}')
+    ? e.url.replace('{q}', encodeURIComponent(q))
+    : e.url;
 }
 
 function go(input) {
   const v = String(input || '').trim();
   if (!v) return;
   if (isSearchQuery(v)) {
-    openUrl(searchUrl(v, S.settings.engine), v);
+    openUrl(engineSearchUrl(v), v);
     return;
   }
   const url = normalizeUrl(v);
@@ -461,6 +552,111 @@ function bindConsole() {
   $('aiInsert').addEventListener('click', () => { $('consoleInput').value = S.aiCode; });
 }
 
+/* ── 搜索引擎管理 ─────────────────────────────────────────── */
+function renderEngineList() {
+  const ul = $('engineList');
+  ul.innerHTML = '';
+  S.engines.forEach((e) => {
+    const li = el('li' + (e.id === S.settings.engine ? '' : ''));
+    if (e.id === S.settings.engine) li.classList.add('is-on');
+
+    const pick = el('button', 'eg-pick');
+    pick.type = 'button';
+
+    if (e.icon) {
+      const img = el('img');
+      img.alt = '';
+      img.referrerPolicy = 'no-referrer';
+      img.src = e.icon;
+      img.addEventListener('error', () => {
+        img.replaceWith(el('span', 'eg-fallback', e.name.charAt(0)));
+      }, { once: true });
+      pick.append(img);
+    } else {
+      pick.append(el('span', 'eg-fallback', e.name.charAt(0)));
+    }
+
+    pick.append(el('span', 'eg-name', e.name));
+    pick.addEventListener('click', () => {
+      S.settings.engine = e.id;
+      saveSettings();
+      renderEngineIcon();
+      renderEngineList();
+      $('dlgEngine').close();
+    });
+    li.append(pick);
+
+    if (!e.builtin) {
+      const del = el('button', 'eg-del');
+      del.type = 'button';
+      del.setAttribute('aria-label', `删除 ${e.name}`);
+      del.innerHTML = '<svg viewBox="0 0 24 24"><use href="#i-x"/></svg>';
+      del.addEventListener('click', () => {
+        S.engines = S.engines.filter((x) => x.id !== e.id);
+        if (S.settings.engine === e.id) S.settings.engine = S.engines[0]?.id || 'bing';
+        saveEngines(); saveSettings();
+        renderEngineIcon(); renderEngineList();
+      });
+      li.append(del);
+    }
+
+    ul.append(li);
+  });
+}
+
+function bindEngines() {
+  $('btnEngine').addEventListener('click', () => {
+    renderEngineList();
+    $('dlgEngine').showModal();
+  });
+
+  $('btnNewEngine').addEventListener('click', () => {
+    $('engName').value = '';
+    $('engUrl').value = '';
+    $('engIcon').value = '';
+    $('dlgNewEngine').showModal();
+  });
+
+  $('engSave').addEventListener('click', async () => {
+    const name = $('engName').value.trim();
+    const url = $('engUrl').value.trim();
+    const icon = $('engIcon').value.trim();
+    if (!name || !url) { toast('名称和地址都要填'); return; }
+
+    let iconUrl = icon;
+    if (!iconUrl) {
+      // 自动取站点图标
+      try {
+        const origin = new URL(url.replace('{q}', '')).origin;
+        iconUrl = `${origin}/favicon.ico`;
+      } catch {}
+    }
+
+    S.engines.push({ id: 'e' + Date.now().toString(36), name, url, icon: iconUrl, builtin: false });
+    saveEngines();
+    $('dlgNewEngine').close();
+    renderEngineList();
+    toast('已添加');
+  });
+
+  // 设置页的「管理」按钮打开同一个引擎弹窗
+  const manageBtn = $('btnManageEngine');
+  if (manageBtn) {
+    manageBtn.addEventListener('click', () => {
+      renderEngineList();
+      $('dlgEngine').showModal();
+    });
+  }
+
+  // 旧版 segEngine 若还存在，绑定兼容
+  document.querySelectorAll('#segEngine button').forEach((b) => {
+    b.addEventListener('click', () => {
+      S.settings.engine = b.dataset.engine;
+      saveSettings(); renderEngineIcon(); renderSettings();
+    });
+  });
+}
+
 /* ── 设置渲染 ─────────────────────────────────────────────── */
 function renderSettings() {
   // 日夜
@@ -468,7 +664,9 @@ function renderSettings() {
     b.setAttribute('aria-pressed', String(b.dataset.mode === S.settings.dayNight));
   });
 
-  // 引擎
+  // 引擎：设置页显示当前引擎名
+  const sub = $('engineSub');
+  if (sub) sub.textContent = `当前：${currentEngine().name}`;
   document.querySelectorAll('#segEngine button').forEach((b) => {
     b.setAttribute('aria-pressed', String(b.dataset.engine === S.settings.engine));
   });
@@ -554,39 +752,114 @@ async function renderSiteList() {
 
   for (const h of hosts.slice(0, 20)) {
     const li = el('li');
-    const body = el('div', 'd-body');
+    const body = el('button', 'd-body');
+    body.type = 'button';
+    body.style.cssText = 'border:0;background:none;padding:0;text-align:left';
     body.append(el('span', 'd-host', h));
+
     const zoom = await store.get('zoom:' + h, null);
     const keep = await store.get('keep:' + h, null);
+    const mode = await store.get('mode:' + h, null);
     const bits = [];
+    bits.push(MODE_LABEL[mode || 2] || '有状态栏');
     if (zoom) bits.push(`缩放 ${zoom}%`);
     bits.push(keep === false ? '不保活' : '保活');
     body.append(el('span', 'd-meta', bits.join(' · ')));
+    body.addEventListener('click', () => openSiteView(h));
     li.append(body);
 
-    const b = el('button', 'btn ghost sm', '清除');
+    const b = el('button', 'icon-btn sm');
     b.type = 'button';
-    b.addEventListener('click', () => {
-      confirmDialog(`清除 ${h} 的数据？`,
-        '将移除该站点的 Cookie、缓存、本地存储，以及它在这里的缩放和保活设置。此操作不可撤销。',
-        async () => {
-          try {
-            await native.clearSiteData(`https://${h}`);
-            await store.remove('zoom:' + h);
-            await store.remove('keep:' + h);
-            toast('已清除');
-          } catch (err) {
-            // 关键：任何异常都吞掉，绝不让它冒泡导致应用崩溃
-            console.warn('清除站点数据时出错', err);
-            toast('部分数据未能清除');
-          } finally {
-            renderSiteList();
-          }
-        });
-    });
+    b.setAttribute('aria-label', `管理 ${h}`);
+    b.innerHTML = '<svg viewBox="0 0 24 24"><use href="#i-chev"/></svg>';
+    b.addEventListener('click', () => openSiteView(h));
     li.append(b);
     ul.append(li);
   }
+}
+
+/* ── 站点独立设置页（P1）─────────────────────────────────── */
+let siteHost = '';
+
+async function openSiteView(host) {
+  siteHost = host;
+  $('siteTitle').textContent = host;
+  $('siteHostLabel').textContent = '这些设置只作用于这一个站点。';
+
+  const mode = Number(await store.get('mode:' + host, S.settings.pageMode || 2));
+  const zoom = await store.get('zoom:' + host, null);
+  const keep = await store.get('keep:' + host, null);
+
+  document.querySelectorAll('#siteModeGrid .mode-card').forEach((b) => {
+    b.setAttribute('aria-pressed', String(Number(b.dataset.mode) === mode));
+  });
+  $('siteZoomOut').textContent = zoom ? `${zoom}%` : '默认';
+  document.querySelectorAll('#siteKeepSeg button').forEach((b) => {
+    b.setAttribute('aria-pressed', String((b.dataset.keep === '1') === (keep !== false)));
+  });
+
+  showView('site');
+}
+
+function bindSiteView() {
+  $('siteBack').addEventListener('click', () => showView('settings'));
+
+  document.querySelectorAll('#siteModeGrid .mode-card').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const m = Number(b.dataset.mode);
+      await setPageMode(siteHost, m);
+      document.querySelectorAll('#siteModeGrid .mode-card').forEach((x) => {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      // 若该站点正在打开，立即生效
+      const t = tabs?.tabs.find((x) => x.host === siteHost);
+      if (t) { t.mode = m; if (t.id === tabs.activeId) applyPageMode(t); }
+      toast(`已设为「${MODE_LABEL[m]}」`);
+    });
+  });
+
+  $('siteZoomClear').addEventListener('click', async () => {
+    await store.remove('zoom:' + siteHost);
+    $('siteZoomOut').textContent = '默认';
+    const t = tabs?.tabs.find((x) => x.host === siteHost);
+    if (t) { t.zoom = S.settings.zoom; if (t.id === tabs.activeId) tabs._applyZoom(t); }
+    toast('已清除缩放');
+  });
+
+  document.querySelectorAll('#siteKeepSeg button').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const on = b.dataset.keep === '1';
+      await store.set('keep:' + siteHost, on);
+      document.querySelectorAll('#siteKeepSeg button').forEach((x) => {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      const t = tabs?.tabs.find((x) => x.host === siteHost);
+      if (t) await native.keepAlive(t.id, on);
+      toast(on ? '已开启保活' : '已关闭保活');
+    });
+  });
+
+  $('siteClear').addEventListener('click', () => {
+    const host = siteHost;
+    confirmDialog(`清除 ${host} 的全部数据？`,
+      '将移除 Cookie、缓存、本地存储，以及它在见素里的缩放、全屏与保活设置。此操作不可撤销。',
+      async () => {
+        try {
+          await native.clearSiteData(`https://${host}`);
+          await store.remove('zoom:' + host);
+          await store.remove('keep:' + host);
+          await store.remove('mode:' + host);
+          S.favs = S.favs.filter((f) => f.host !== host);
+          S.recent = S.recent.filter((r) => hostOf(r.url) !== host);
+          saveFavs(); saveRecent();
+          toast(`${host} 已清除`);
+          showView('settings');
+        } catch (e) {
+          console.warn(e);
+          toast('部分数据未能清除');
+        }
+      });
+  });
 }
 
 /* ── 设置交互 ─────────────────────────────────────────────── */
@@ -917,6 +1190,12 @@ function openPageMenu() {
   const t = tabs?.current();
   if (!t) return;
   $('zoomSub').textContent = `当前 ${t.zoom}% · 仅对本网页生效`;
+
+  document.querySelectorAll('#modeGrid .mode-card').forEach((b) => {
+    b.setAttribute('aria-pressed', String(Number(b.dataset.mode) === Number(t.mode)));
+  });
+  $('modeSub').textContent = `当前「${MODE_LABEL[t.mode] || '有状态栏'}」· 下次打开此网页生效`;
+
   document.querySelectorAll('#segKeep button').forEach((b) => {
     b.setAttribute('aria-pressed', String((b.dataset.keep === '1') === (t.keepAlive !== false)));
   });
@@ -972,15 +1251,27 @@ function toast(msg) {
 
 /* ── 启动 ─────────────────────────────────────────────────── */
 async function boot() {
-  await loadState();
-
+  // 第一帧：先用 localStorage 镜像立刻画出来，不等 IndexedDB
+  hydrateSync();
   mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   mediaQuery.addEventListener?.('change', () => {
     if (S.settings.dayNight === 'auto') applyTheme();
   });
-
   applyTheme();
   renderHero();
+  renderChips();
+  renderFavs();
+  renderRecent();
+  renderEngineIcon();
+
+  // 第二帧：IndexedDB 到位后校正
+  await loadState();
+  mediaQuery = mediaQuery || window.matchMedia('(prefers-color-scheme: dark)');
+  applyTheme();
+  renderChips();
+  renderFavs();
+  renderRecent();
+  renderEngineIcon();
 
   tabs = new TabManager({
     root: $('frames'),
@@ -993,10 +1284,15 @@ async function boot() {
       blocked: $('pgBlocked'),
     },
     onOpen: (tab) => {
-      if (!tab) return;
+      if (!tab) {
+        // 退出网页层：恢复壳页面自己的系统栏
+        document.documentElement.classList.remove('in-page-immersive');
+        native.syncSystemBars();
+        return;
+      }
       $('pgTitle').textContent = tab.title;
       $('pgHost').textContent = tab.host;
-      native.syncSystemBars();
+      applyPageMode(tab);
       renderConsoleTarget();
       updateConsoleNote();
     },
@@ -1071,7 +1367,44 @@ async function boot() {
   bindConsole();
   bindSettings();
   bindColorDialog();
+  bindEngines();
+  bindSiteView();
   bindPageLayer();
+
+  // 网页内的控制台浮钮 → 切到控制台视图
+  try {
+    globalThis.Capacitor?.Plugins?.JianSuNative?.addListener?.('consoleRequested', () => {
+      showView('console');
+    });
+  } catch {}
+
+  // 从外部链接（默认浏览器 / 桌面快捷方式）进入
+  window.__jiansuLaunch = (url, mode) => {
+    if (!url) return;
+    openUrl(url, prettyName(url), mode || 3);
+  };
+  try {
+    const r = await native.rawLaunchUrl();
+    if (r) window.__jiansuLaunch(r.url, r.mode);
+  } catch {}
+
+  // 返回键逐级退栈：原生先问网页历史，再问这里
+  window.__jiansuBack = () => {
+    // 1. 网页层开着 → 收起
+    if (!document.getElementById('pageLayer').hidden) {
+      tabs.hideLayer();
+      syncBars();
+      return true;
+    }
+    // 2. 不在首页 → 回首页
+    const active = document.querySelector('.view.is-active')?.id;
+    if (active && active !== 'view-home') {
+      showView('home');
+      return true;
+    }
+    // 3. 首页 → 交给原生最小化
+    return false;
+  };
 
   window.addEventListener('scroll', () => {
     $('shell').classList.toggle('is-scrolled', window.scrollY > 4);
@@ -1079,22 +1412,8 @@ async function boot() {
 
   window.addEventListener('resize', syncBars);
 
-  // 系统返回键：先退网页层，再退到首页，最后才退出
-  native.onBackButton(async () => {
-    if (!document.getElementById('pageLayer').hidden) {
-      const t = tabs.current();
-      if (t) {
-        const went = await tabs.back();
-        if (went) return;
-      }
-      await tabs.hideLayer();
-      syncBars();
-      return;
-    }
-    const active = document.querySelector('.view.is-active')?.id;
-    if (active && active !== 'view-home') { showView('home'); return; }
-    native.exitApp();
-  });
+  // 返回键由原生 onBackPressed 接管（见 MainActivity），
+  // 这里不再注册 backButton 监听，避免两边抢事件导致直接退出。
 
   await native.enterImmersive();
   await native.applyInsets();
@@ -1129,6 +1448,24 @@ function bindPageLayer() {
     $('zoomSub').textContent = '当前 100% · 仅对本网页生效';
   });
 
+  document.querySelectorAll('#modeGrid .mode-card').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const t = tabs.current();
+      if (!t) return;
+      const m = Number(b.dataset.mode);
+      t.mode = m;
+      await setPageMode(t.host, m);
+
+      document.querySelectorAll('#modeGrid .mode-card').forEach((x) => {
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      $('modeSub').textContent = `当前「${MODE_LABEL[m]}」· 下次打开此网页生效`;
+
+      applyPageMode(t);
+      toast(`已设为「${MODE_LABEL[m]}」`);
+    });
+  });
+
   document.querySelectorAll('#segKeep button').forEach((b) => {
     b.addEventListener('click', async () => {
       const t = tabs.current();
@@ -1157,8 +1494,10 @@ function bindPageLayer() {
   $('pmShortcut').addEventListener('click', async () => {
     const t = tabs.current();
     if (!t) return;
-    const r = await native.addShortcut({ url: t.url, title: t.title, icon: t.icon });
-    toast(r.ok ? '已请求创建桌面图标' : (r.error || '创建失败'));
+    const r = await native.addShortcut({
+      url: t.url, title: t.title, icon: t.icon, mode: 3,
+    });
+    toast(r.ok ? '已请求创建桌面图标（默认全屏）' : (r.error || '创建失败'));
   });
 
   $('pmConsole').addEventListener('click', () => {

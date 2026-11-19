@@ -135,6 +135,82 @@ input, select, textarea { -webkit-appearance: none; appearance: none; }
 }
 .omnibox:focus-within { border-color: var(--line-strong); }
 .omnibox-icon { width: 19px; height: 19px; color: var(--fg-faint); flex: none; }
+
+/* ── 全屏三模式选择 ───────────────────────────────────────── */
+.mode-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: var(--s2); margin-bottom: var(--s4);
+}
+.mode-card {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: var(--s3) 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--elev);
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.mode-card[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+.mode-icon { width: 40px; height: 32px; color: var(--fg-faint); }
+.mode-icon svg { width: 100%; height: 100%; }
+.mode-icon .m-frame { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.mode-icon .m-line { stroke: currentColor; stroke-width: 1.1; }
+.mode-icon .m-dot { fill: currentColor; stroke: none; }
+.mode-card[aria-pressed="true"] .mode-icon { color: var(--accent); }
+.mode-icon .m-frame.is-full { fill: var(--accent-wash); }
+.mode-name { font-size: .78rem; color: var(--fg); font-weight: 500; }
+.mode-desc { font-size: .66rem; color: var(--fg-faint); text-align: center; line-height: 1.3; }
+
+/* 模式①②时才显示网页层外壳 */
+html:not(.in-page-immersive) .page-bar { display: flex; }
+html.in-page-immersive .page-bar,
+html.in-page-immersive .tabstrip { display: none; }
+
+/* 网页层不出现任何底部条，避免挡住页面 */
+.page-layer .tabbar { display: none; }
+
+/* 搜索栏里的引擎切换按钮 */
+.engine-btn {
+  display: flex; align-items: center; gap: 3px;
+  height: 32px; padding: 0 4px 0 6px; flex: none;
+  border-radius: var(--r-sm);
+  transition: background var(--dur) var(--ease);
+}
+.engine-btn:active { background: var(--elev-2); }
+.engine-btn img { width: 20px; height: 20px; object-fit: contain; border-radius: 5px; }
+/* 引擎图标统一降饱和，避免彩色图标破坏低饱和基调 */
+.engine-btn img,
+.engine-list img { filter: grayscale(.72) opacity(.82); }
+.engine-btn:active img { filter: grayscale(.3) opacity(1); }
+.engine-btn .fallback {
+  width: 20px; height: 20px; display: grid; place-items: center;
+  border-radius: 5px; background: var(--elev-2);
+  font-size: .68rem; color: var(--fg-dim); font-weight: 600;
+}
+.engine-caret { width: 12px; height: 12px; color: var(--fg-faint); }
+
+/* 引擎列表 */
+.engine-list { list-style: none; margin: 0; padding: 0; }
+.engine-list li {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3) 0; border-bottom: 1px solid var(--line);
+}
+.engine-list li:last-child { border-bottom: 0; }
+.engine-list .eg-pick {
+  display: flex; align-items: center; gap: var(--s3);
+  flex: 1; min-width: 0; padding: 0; text-align: left;
+}
+.engine-list img, .engine-list .eg-fallback {
+  width: 26px; height: 26px; border-radius: 7px; object-fit: contain;
+  flex: none; background: var(--elev-2);
+}
+.engine-list .eg-fallback { display: grid; place-items: center; font-size: .72rem; color: var(--fg-dim); }
+.engine-list .eg-name { flex: 1; min-width: 0; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.engine-list li.is-on .eg-name { color: var(--accent); font-weight: 500; }
+.engine-list .eg-del { width: 28px; height: 28px; display: grid; place-items: center; color: var(--fg-faint); }
+.engine-list .eg-del svg { width: 14px; height: 14px; }
 .omnibox input {
   flex: 1; min-width: 0; height: 100%;
   border: 0; background: none; outline: none; font-size: .95rem;

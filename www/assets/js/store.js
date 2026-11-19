@@ -84,6 +84,15 @@ export async function get(key, fallback) {
   return v;
 }
 
+/**
+ * 同步读镜像。用于首帧渲染：不等 IndexedDB，先用上次的值画出来，
+ * 等异步数据到了再覆盖。启动观感差距很明显。
+ */
+export function getSync(key, fallback) {
+  const v = mirrorRead(key);
+  return v === undefined ? fallback : v;
+}
+
 export async function set(key, value) {
   mirrorWrite(key, value);
   await idbSet(key, value);

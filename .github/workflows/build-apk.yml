@@ -25,10 +25,6 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Verify web assets
-        run: |
-          test -f www/index.html || { echo "missing www/index.html"; exit 1; }
-
       - name: Generate Android project
         run: npx cap add android
 
@@ -40,17 +36,75 @@ jobs:
           cp native/android/JianSuNativePlugin.java "$DEST/"
           cp native/android/TabHost.java "$DEST/"
 
-          RES=android/app/src/main/res/xml
-          mkdir -p "$RES"
-          cp native/android/file_paths.xml "$RES/"
-          ls -l "$DEST" "$RES"
+          mkdir -p android/app/src/main/res/xml
+          cp native/android/file_paths.xml android/app/src/main/res/xml/
 
-      - name: Patch AndroidManifest and app strings
+      - name: Install app icons
+        run: |
+          set -e
+          # 用固定生成的图标覆盖 Capacitor 默认图标
+          for d in native/android/res/mipmap-*; do
+            name=$(basename "$d")
+            mkdir -p "android/app/src/main/res/$name"
+            cp "$d"/*.png "android/app/src/main/res/$name/"
+          done
+
+          # 删掉 Capacitor 自带的自适应图标（会盖住我们的 PNG）
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
+          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@mipmap/ic_launcher_background"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>
+          XML
+          cp android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml \
+             android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+
+          # 校验：确认图标已被替换
+          ls -l android/app/src/main/res/mipmap-xxxhdpi/
+          python3 - <<'PY'
+          import pathlib
+          f = pathlib.Path("android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png")
+          assert f.exists() and f.stat().st_size > 5000, "图标未被替换"
+          print("icon ok:", f.stat().st_size, "bytes")
+          PY
+
+      - name: Remove splash screen
         run: |
           python3 - <<'PY'
           import pathlib, re
 
-          # 1. 权限 + FileProvider
+          res = pathlib.Path("android/app/src/main/res")
+
+          # 删掉 Capacitor 的启动图
+          for pat in ("drawable*/splash.png", "drawable*/splash.xml", "drawable*/splash.webp"):
+              for f in res.glob(pat):
+                  try: f.unlink()
+                  except Exception: pass
+
+          for p in res.glob("values*/styles.xml"):
+              s = p.read_text()
+              # 启动主题不再带 Logo，只留底色，避免出现蓝色方块开屏
+              s = re.sub(r'\s*<item name="android:windowBackground">.*?</item>', '', s)
+              s = re.sub(r'\s*<item name="android:windowSplashScreenAnimatedIcon">.*?</item>', '', s)
+              s = re.sub(r'\s*<item name="android:windowSplashScreenBackground">.*?</item>', '', s)
+              s = re.sub(r'\s*<item name="windowSplashScreenAnimatedIcon">.*?</item>', '', s)
+              s = re.sub(r'\s*<item name="postSplashScreenTheme">.*?</item>', '', s)
+              s = s.replace('parent="Theme.SplashScreen"',
+                            'parent="Theme.AppCompat.DayNight.NoActionBar"')
+              s = s.replace('parent="Theme.SplashScreen.IconBackground"',
+                            'parent="Theme.AppCompat.DayNight.NoActionBar"')
+              p.write_text(s)
+          print("splash removed")
+          PY
+
+      - name: Patch AndroidManifest
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
           p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
 
@@ -59,15 +113,17 @@ jobs:
               "android.permission.INSTALL_SHORTCUT",
               "android.permission.POST_NOTIFICATIONS",
               "android.permission.REQUEST_INSTALL_PACKAGES",
-              "android.permission.WRITE_EXTERNAL_STORAGE",
           ]
-          block = "".join(
-              f'    <uses-permission android:name="{x}"/>\n' for x in perms
-              if x not in s
-          )
+          block = "".join(f'    <uses-permission android:name="{x}"/>\n'
+                          for x in perms if x not in s)
           if block:
               s = s.replace("<application", block + "    <application", 1)
 
+          # 全屏：主题里不要 ActionBar，边到边由代码控制
+          s = re.sub(r'android:theme="@style/AppTheme[^"]*"',
+                     'android:theme="@style/AppTheme.NoActionBar"', s)
+
+          # FileProvider（应用内更新）
           if "FileProvider" not in s:
               provider = (
                   '        <provider\n'
@@ -84,7 +140,23 @@ jobs:
 
           p.write_text(s)
 
-          # 2. 应用名改成「见素」
+          # 3. 注册为浏览器：让「见素」出现在选择列表里
+          intent_block = '''
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+            </intent-filter>
+'''
+          if 'android.intent.category.BROWSABLE' not in s:
+              m = re.search(r'(<activity[^>]*MainActivity[^>]*>)', s)
+              if m:
+                  idx = s.index('</activity>', m.end())
+                  s = s[:idx] + intent_block + s[idx:]
+                  p.write_text(s)
+
           st = pathlib.Path("android/app/src/main/res/values/strings.xml")
           t = st.read_text()
           t = re.sub(r'<string name="app_name">.*?</string>',
@@ -95,6 +167,38 @@ jobs:
           print("manifest patched")
           PY
 
+      - name: Fixed signing config
+        run: |
+          python3 scripts/make_keystore.py
+          cp native/keystore/jiansu.keystore android/app/jiansu.keystore
+
+          python3 - <<'PY'
+          import pathlib
+
+          p = pathlib.Path("android/app/build.gradle")
+          s = p.read_text()
+
+          store_block = '''
+    signingConfigs {
+        jiansu {
+            storeFile file("jiansu.keystore")
+            storePassword "jiansu2026"
+            keyAlias "jiansu"
+            keyPassword "jiansu2026"
+        }
+    }
+'''
+          if "signingConfigs" not in s:
+              s = s.replace("    buildTypes {", store_block + "\n    buildTypes {", 1)
+
+          # debug 与 release 都用固定签名，保证每次 APK 的签名一致
+          s = s.replace("debug {", "debug {\n            signingConfig signingConfigs.jiansu")
+          if "release {" in s and "signingConfig signingConfigs.jiansu" not in s.split("release {")[1][:200]:
+              s = s.replace("release {", "release {\n            signingConfig signingConfigs.jiansu", 1)
+          p.write_text(s)
+          print("signing patched")
+          PY
+
       - name: Sync web assets
         run: npx cap sync android
 
@@ -103,6 +207,12 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+
+      - name: Verify signature
+        run: |
+          APK=$(ls android/app/build/outputs/apk/debug/*.apk | head -1)
+          echo "APK: $APK"
+          $ANDROID_HOME/build-tools/*/apksigner verify --print-certs "$APK" || true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

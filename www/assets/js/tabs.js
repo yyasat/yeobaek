@@ -23,7 +23,7 @@ export class TabManager {
 
   setZoomDefault(v) { this.zoomDefault = Number(v) || 100; }
 
-  async create(url, { title, zoom } = {}) {
+  async create(url, { title, zoom, mode } = {}) {
     const u = normalizeUrl(url);
     if (!u) return null;
 
@@ -34,14 +34,15 @@ export class TabManager {
       host: hostOf(u),
       zoom: zoom || this.zoomDefault,
       keepAlive: true,
-      mode: this.nativeMode ? 'native' : 'iframe',
+      mode: Number(mode || 2),          // 1 有顶栏 / 2 有状态栏 / 3 完全全屏
+      engine: this.nativeMode ? 'native' : 'iframe',
       ready: false,
       canBack: false,
       canForward: false,
     };
 
     if (this.nativeMode) {
-      const r = await webview.open({ id, url: u });
+      const r = await webview.open({ id, url: u, mode: tab.mode });
       tab.ready = Boolean(r?.ok);
       if (r?.title) tab.title = r.title;
     } else {
@@ -174,7 +175,7 @@ export class TabManager {
     if (i < 0) return;
     const tab = this.tabs[i];
 
-    if (tab.mode === 'native') await webview.close(tab.id);
+    if (tab.engine === 'native') await webview.close(tab.id);
     else tab.iframe?.remove();
 
     this.tabs.splice(i, 1);
@@ -206,7 +207,7 @@ export class TabManager {
     const tab = this.current();
     if (!tab) return { ok: false, error: '没有打开的页面' };
 
-    if (tab.mode === 'native') {
+    if (tab.engine === 'native') {
       const r = await webview.eval(tab.id, code);
       return r?.ok ? r : { ok: false, error: r?.error || '执行失败' };
     }
