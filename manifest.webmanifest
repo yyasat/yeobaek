@@ -1,0 +1,21 @@
+{
+  "name": "여백 · 留白",
+  "short_name": "여백",
+  "description": "低饱和浅蓝的安静浏览器外壳",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#EEF2F5",
+  "theme_color": "#EEF2F5",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "./assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./assets/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "控制台", "url": "./index.html#console" },
+    { "name": "标签页", "url": "./index.html#tabs" }
+  ]
+}

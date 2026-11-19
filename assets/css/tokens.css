@@ -1,0 +1,99 @@
+/* ─────────────────────────────────────────────────────────────
+   여백 · design tokens
+   低饱和偏灰的浅蓝色系。六套主题都收在同一个蓝灰色相带里，
+   只在中性度、明度与一点点温度上做区分，保证切换时不跳戏。
+   颜色以「底色 / 浮起 / 线 / 字 / 弱字 / 强调」六层组织。
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 20px; --s6: 24px; --s7: 32px; --s8: 44px; --s9: 64px;
+
+  --r-sm: 8px; --r-md: 14px; --r-lg: 20px; --r-xl: 26px; --r-full: 999px;
+
+  --font: "Pretendard", "SUIT", -apple-system, BlinkMacSystemFont,
+          "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans SC",
+          "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-num: "SF Mono", "JetBrains Mono", ui-monospace, "Menlo", monospace;
+
+  --fs: 15px;
+  --dur: 200ms;
+  --ease: cubic-bezier(.22, .61, .36, 1);
+
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+
+  --bar-h: 52px;
+  --tab-h: 60px;
+
+  --danger: #A2645E;
+  --danger-line: rgba(162,100,94,.34);
+  --danger-wash: rgba(162,100,94,.09);
+}
+
+/* 1 · 하늘 — 浅蓝灰，默认 */
+[data-theme="haneul"] {
+  --bg:#EEF2F5; --elev:#F8FAFB; --elev-2:#E2E9EE;
+  --line:rgba(28,38,48,.10); --line-strong:rgba(28,38,48,.20);
+  --fg:#1E272E; --fg-dim:#6D7B85; --fg-faint:#9BA7B0;
+  --accent:#6C8296; --accent-ink:#F8FAFB; --accent-wash:rgba(108,130,150,.14);
+  --shadow:0 1px 2px rgba(28,38,48,.05), 0 12px 28px -18px rgba(28,38,48,.32);
+  --scheme: light;
+}
+
+/* 2 · 물안개 — 更灰一层，几乎无彩 */
+[data-theme="mulan-gae"] {
+  --bg:#EDF0F2; --elev:#F7F9FA; --elev-2:#E0E6E9;
+  --line:rgba(30,38,44,.10); --line-strong:rgba(30,38,44,.20);
+  --fg:#1F272B; --fg-dim:#6B7880; --fg-faint:#9AA5AB;
+  --accent:#6B7C88; --accent-ink:#F7F9FA; --accent-wash:rgba(107,124,136,.14);
+  --shadow:0 1px 2px rgba(30,38,44,.05), 0 12px 28px -18px rgba(30,38,44,.32);
+  --scheme: light;
+}
+
+/* 3 · 청회 — 蓝调更明显一格 */
+[data-theme="cheonghoe"] {
+  --bg:#E9EEF2; --elev:#F6F9FB; --elev-2:#DAE3EA;
+  --line:rgba(24,36,46,.11); --line-strong:rgba(24,36,46,.21);
+  --fg:#1C262E; --fg-dim:#64737E; --fg-faint:#95A3AD;
+  --accent:#5C7488; --accent-ink:#F6F9FB; --accent-wash:rgba(92,116,136,.14);
+  --shadow:0 1px 2px rgba(24,36,46,.06), 0 12px 28px -18px rgba(24,36,46,.34);
+  --scheme: light;
+}
+
+/* 4 · 먹 — 夜间，同色相压暗 */
+[data-theme="meok"] {
+  --bg:#151A1E; --elev:#1C2227; --elev-2:#262E34;
+  --line:rgba(226,235,241,.10); --line-strong:rgba(226,235,241,.22);
+  --fg:#E4EBF0; --fg-dim:#87949C; --fg-faint:#5D6971;
+  --accent:#8FA5B4; --accent-ink:#151A1E; --accent-wash:rgba(143,165,180,.16);
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 18px 34px -20px rgba(0,0,0,.85);
+  --scheme: dark;
+  --danger:#C0837C; --danger-line:rgba(192,131,124,.34); --danger-wash:rgba(192,131,124,.12);
+}
+
+/* 5 · 조약돌 — 掺一点石头的暖，仍守在蓝灰里 */
+[data-theme="joyakdol"] {
+  --bg:#ECEFF0; --elev:#F7F9F9; --elev-2:#DFE4E5;
+  --line:rgba(30,37,39,.10); --line-strong:rgba(30,37,39,.20);
+  --fg:#1E2626; --fg-dim:#66777A; --fg-faint:#96A4A6;
+  --accent:#6B8487; --accent-ink:#F7F9F9; --accent-wash:rgba(107,132,135,.14);
+  --shadow:0 1px 2px rgba(30,37,39,.05), 0 12px 28px -18px rgba(30,37,39,.32);
+  --scheme: light;
+}
+
+/* 6 · 새벽 — 蓝里带一丝紫，收得更冷 */
+[data-theme="saebyeok"] {
+  --bg:#EDEFF5; --elev:#F8F9FC; --elev-2:#E1E4ED;
+  --line:rgba(29,33,44,.10); --line-strong:rgba(29,33,44,.20);
+  --fg:#1F2530; --fg-dim:#6A7180; --fg-faint:#98A0AF;
+  --accent:#7080A0; --accent-ink:#F8F9FC; --accent-wash:rgba(112,128,160,.14);
+  --shadow:0 1px 2px rgba(29,33,44,.05), 0 12px 28px -18px rgba(29,33,44,.32);
+  --scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur: 1ms; }
+}
