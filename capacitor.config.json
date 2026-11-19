@@ -1,7 +1,7 @@
 {
   "appId": "com.yeobaek.browser",
   "appName": "여백",
-  "webDir": ".",
+  "webDir": "www",
   "bundledWebRuntime": false,
   "android": {
     "allowMixedContent": true,

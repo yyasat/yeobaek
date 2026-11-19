@@ -20,26 +20,31 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Install Capacitor
+      - name: Install dependencies
         run: npm install --no-audit --no-fund
+
+      - name: Verify web assets
+        run: |
+          test -f www/index.html || { echo "missing www/index.html"; exit 1; }
+          du -sh www
 
       - name: Generate Android project
         run: npx cap add android
 
-      - name: Inject native plugin + activity
+      - name: Inject native plugin and activity
         run: |
           DEST=android/app/src/main/java/com/yeobaek/browser
           mkdir -p "$DEST"
           cp native/android/MainActivity.java "$DEST/"
           cp native/android/YeobaekNativePlugin.java "$DEST/"
+          ls -l "$DEST"
 
-      - name: Grant webview permissions + immersive theme
+      - name: Add internet permission
         run: |
-          MAN=android/app/src/main/AndroidManifest.xml
           python3 - <<'PY'
-          import re, pathlib
+          import pathlib
           p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
           if "INTERNET" not in s:
@@ -47,7 +52,7 @@ jobs:
                   '<uses-permission android:name="android.permission.INTERNET"/>\n'
                   '    <uses-permission android:name="android.permission.INSTALL_SHORTCUT"/>\n'
                   '    <application', 1)
-          p.write_text(s)
+              p.write_text(s)
           PY
 
       - name: Sync web assets
@@ -57,7 +62,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
