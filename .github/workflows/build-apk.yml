@@ -28,6 +28,9 @@ jobs:
       - name: Generate Android project
         run: npx cap add android
 
+      - name: Sync web assets
+        run: npx cap sync android
+
       - name: Inject native sources
         run: |
           DEST=android/app/src/main/java/com/yeobaek/browser
@@ -141,20 +144,11 @@ jobs:
           p.write_text(s)
 
           # 3. 注册为浏览器：让「见素」出现在选择列表里
-          intent_block = '''
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http" />
-                <data android:scheme="https" />
-            </intent-filter>
-'''
           if 'android.intent.category.BROWSABLE' not in s:
-              m = re.search(r'(<activity[^>]*MainActivity[^>]*>)', s)
+              m = re.search(r'<activity[^>]*MainActivity[^>]*>', s)
               if m:
                   idx = s.index('</activity>', m.end())
-                  s = s[:idx] + intent_block + s[idx:]
+                  s = s[:idx] + open('native/android/intent_filter.xml').read() + s[idx:]
                   p.write_text(s)
 
           st = pathlib.Path("android/app/src/main/res/values/strings.xml")
@@ -178,18 +172,21 @@ jobs:
           p = pathlib.Path("android/app/build.gradle")
           s = p.read_text()
 
-          store_block = '''
-    signingConfigs {
-        jiansu {
-            storeFile file("jiansu.keystore")
-            storePassword "jiansu2026"
-            keyAlias "jiansu"
-            keyPassword "jiansu2026"
-        }
-    }
-'''
+          lines = [
+              "    signingConfigs {",
+              "        jiansu {",
+              '            storeFile file("jiansu.keystore")',
+              '            storePassword "jiansu2026"',
+              '            keyAlias "jiansu"',
+              '            keyPassword "jiansu2026"',
+              "        }",
+              "    }",
+              "",
+          ]
+          store_block = "\n".join(lines)
+
           if "signingConfigs" not in s:
-              s = s.replace("    buildTypes {", store_block + "\n    buildTypes {", 1)
+              s = s.replace("    buildTypes {", store_block + "    buildTypes {", 1)
 
           # debug 与 release 都用固定签名，保证每次 APK 的签名一致
           s = s.replace("debug {", "debug {\n            signingConfig signingConfigs.jiansu")
@@ -198,9 +195,6 @@ jobs:
           p.write_text(s)
           print("signing patched")
           PY
-
-      - name: Sync web assets
-        run: npx cap sync android
 
       - name: Build debug APK
         run: |
